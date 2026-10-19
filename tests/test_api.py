@@ -47,6 +47,14 @@ def test_project_filter_passthrough(api):
     assert len(api.state("today", "")["tasks"]) == 2
 
 
+def test_theme_setting_persists(api, tmp_path):
+    assert api.state("today")["theme"] == "system"
+    api.set_theme("dark")
+    assert Api(Store(tmp_path / "test.db")).state("today")["theme"] == "dark"
+    with pytest.raises(ValueError):
+        api.set_theme("blue")
+
+
 def test_internal_attributes_hidden_from_js(api):
     public = [n for n in vars(api) if not n.startswith("_")]
     assert public == []

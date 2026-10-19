@@ -1,2 +1,4 @@
 pywebview>=6
+pystray>=0.19
+Pillow>=10.1
 pytest>=8

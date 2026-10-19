@@ -1,26 +1,13 @@
 import sys
-from pathlib import Path
 
-import webview
-
-from .api import Api
 from .db import Store
-
-WEB_DIR = Path(__file__).parent / "web"
+from .desktop import Desktop
 
 
 def main() -> int:
     store = Store()
     store.purge_old_trash()
-    webview.create_window(
-        "ToDoList",
-        url=str(WEB_DIR / "index.html"),
-        js_api=Api(store),
-        width=1080,
-        height=720,
-        min_size=(760, 480),
-    )
-    webview.start(debug="--debug" in sys.argv)
+    Desktop(store).run(debug="--debug" in sys.argv)
     return 0
 
 

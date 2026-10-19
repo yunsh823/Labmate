@@ -1,0 +1,154 @@
+"""Desktop shell: main window, tray icon, and the Today popup above the taskbar."""
+
+import ctypes
+import sys
+import threading
+import time
+from pathlib import Path
+
+import pystray
+import webview
+from PIL import Image, ImageDraw, ImageFont
+
+from .api import Api
+from .db import Store, data_dir
+
+WEB_DIR = Path(__file__).parent / "web"
+POPUP_W, POPUP_H, MARGIN = 380, 560, 12
+ACCENT = (79, 107, 237)
+
+
+def _font(size: int) -> ImageFont.FreeTypeFont:
+    for name in ("segoeuib.ttf", "arialbd.ttf", "Arial Bold.ttf", "DejaVuSans-Bold.ttf"):
+        try:
+            return ImageFont.truetype(name, size)
+        except OSError:
+            pass
+    return ImageFont.load_default(size)
+
+
+def make_icon(count: int = 0, size: int = 64) -> Image.Image:
+    """Accent tile showing today's open count, or a check mark when nothing is left."""
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle((2, 2, size - 3, size - 3), radius=size // 4, fill=ACCENT)
+    if count:
+        text = str(count) if count < 10 else "9+"
+        d.text((size / 2, size / 2), text, font=_font(int(size * (0.62 if count < 10 else 0.46))),
+               fill="white", anchor="mm")
+    else:
+        s = size / 64
+        d.line([(18 * s, 33 * s), (28 * s, 43 * s), (46 * s, 23 * s)], fill="white",
+               width=round(7 * s), joint="curve")
+    return img
+
+
+def _popup_position() -> tuple[int, int]:
+    """Bottom-right corner of the desktop area not covered by the taskbar, in logical px."""
+    if sys.platform == "win32":
+        class RECT(ctypes.Structure):
+            _fields_ = [(n, ctypes.c_long) for n in ("left", "top", "right", "bottom")]
+        r = RECT()
+        ctypes.windll.user32.SystemParametersInfoW(0x30, 0, ctypes.byref(r), 0)  # SPI_GETWORKAREA
+        scale = ctypes.windll.user32.GetDpiForSystem() / 96
+        return int(r.right / scale - POPUP_W - MARGIN), int(r.bottom / scale - POPUP_H - MARGIN)
+    # macOS/Linux: top-right, under the menu bar
+    screen = webview.screens[0]
+    return screen.width - POPUP_W - MARGIN, 40
+
+
+def _hide_from_taskbar(window: webview.Window) -> None:
+    """Make the popup a tool window so it doesn't get its own taskbar button."""
+    if sys.platform != "win32" or window.native is None:
+        return
+    GWL_EXSTYLE, WS_EX_TOOLWINDOW, WS_EX_APPWINDOW = -20, 0x80, 0x40000
+    user32 = ctypes.windll.user32
+    hwnd = window.native.Handle.ToInt64()
+    style = user32.GetWindowLongPtrW(ctypes.c_void_p(hwnd), GWL_EXSTYLE)
+    user32.SetWindowLongPtrW(ctypes.c_void_p(hwnd), GWL_EXSTYLE,
+                             (style | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW)
+
+
+class Desktop:
+    def __init__(self, store: Store):
+        self.api = Api(store, shell=self)
+        self.quitting = False
+        self.popup_visible = False
+        self.popup_hidden_at = 0.0
+
+        self.main = webview.create_window(
+            "ToDoList", url=str(WEB_DIR / "index.html"), js_api=self.api,
+            width=1080, height=720, min_size=(760, 480),
+        )
+        self.popup = webview.create_window(
+            "ToDoList 오늘", url=str(WEB_DIR / "popup.html"), js_api=self.api,
+            width=POPUP_W, height=POPUP_H, frameless=True, easy_drag=False,
+            resizable=False, on_top=True, hidden=True,
+        )
+        self.main.events.closing += self._on_main_closing
+
+        self.icon = pystray.Icon("ToDoList", make_icon(), "ToDoList", menu=pystray.Menu(
+            # default=True: a left click on the tray icon runs this item.
+            pystray.MenuItem("오늘 할 일", lambda icon, item: self.toggle_popup(), default=True),
+            pystray.MenuItem("전체 창 열기", lambda icon, item: self.show_main()),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("종료", lambda icon, item: self.quit()),
+        ))
+
+    def run(self, debug: bool = False) -> None:
+        icon_path = data_dir() / "app.ico"
+        make_icon(size=256).save(icon_path, sizes=[(16, 16), (32, 32), (48, 48), (256, 256)])
+        threading.Thread(target=self.icon.run, daemon=True).start()
+        webview.start(self._on_started, debug=debug, icon=str(icon_path))
+
+    def _on_started(self) -> None:
+        _hide_from_taskbar(self.popup)
+        # Keep the tray count right across midnight even if nothing is edited.
+        while not self.quitting:
+            self.refresh_icon()
+            time.sleep(60)
+
+    def _on_main_closing(self):
+        if self.quitting:
+            return True
+        # Closing the main window only hides it; the app lives on in the tray.
+        threading.Thread(target=self.main.hide, daemon=True).start()
+        return False
+
+    # --- called from the tray and from Api ----------------------------------
+
+    def refresh_icon(self) -> None:
+        n = self.api._open_today()
+        self.icon.icon = make_icon(n)
+        self.icon.title = f"ToDoList · 오늘 남은 할 일 {n}개" if n else "ToDoList · 오늘 할 일을 모두 끝냈어요"
+
+    def toggle_popup(self) -> None:
+        if self.popup_visible:
+            self.hide_popup()
+            return
+        # Clicking the tray icon blurs (and hides) an open popup first; don't reopen it.
+        if time.monotonic() - self.popup_hidden_at < 0.4:
+            return
+        self.popup.move(*_popup_position())
+        self.popup.show()
+        self.popup_visible = True
+
+    def hide_popup(self) -> None:
+        if not self.popup_visible:
+            return
+        self.popup_visible = False
+        self.popup_hidden_at = time.monotonic()
+        self.popup.hide()
+
+    def show_main(self, task_id: int | None = None) -> None:
+        self.hide_popup()
+        self.main.show()
+        self.main.restore()
+        if task_id is not None:
+            self.main.evaluate_js(f"focusTask({int(task_id)})")
+
+    def quit(self) -> None:
+        self.quitting = True
+        self.icon.stop()
+        self.popup.destroy()
+        self.main.destroy()

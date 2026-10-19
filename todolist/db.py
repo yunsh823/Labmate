@@ -31,6 +31,10 @@ CREATE TABLE IF NOT EXISTS tasks (
     created_at   TEXT NOT NULL,
     updated_at   TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
 
@@ -217,6 +221,20 @@ class Store:
             "SELECT DISTINCT project FROM tasks WHERE project != '' AND deleted_at IS NULL ORDER BY project"
         ).fetchall()
         return [r[0] for r in rows]
+
+    # --- settings -----------------------------------------------------------
+
+    def get_setting(self, key: str, default: str) -> str:
+        row = self.conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+        return row[0] if row else default
+
+    def set_setting(self, key: str, value: str) -> None:
+        self.conn.execute(
+            "INSERT INTO settings (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, value),
+        )
+        self.conn.commit()
 
     # --- helpers ------------------------------------------------------------
 

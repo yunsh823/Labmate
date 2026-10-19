@@ -12,14 +12,20 @@
       <ul class="nav" id="nav"></ul>
       <div class="nav-label">프로젝트</div>
       <ul class="nav" id="projects"></ul>
+      <div class="theme" id="theme" role="radiogroup" aria-label="테마">
+        <button data-theme-set="system" role="radio">시스템</button>
+        <button data-theme-set="light" role="radio">라이트</button>
+        <button data-theme-set="dark" role="radio">다크</button>
+      </div>
     </nav>
 
     <main class="main">
       <header class="head">
-        <div>
+        <div class="head-left">
           <h1 id="title"></h1>
-          <div class="sub" id="subtitle"></div>
+          <span class="head-date" id="subtitle"></span>
         </div>
+        <div class="stats" id="stats"></div>
       </header>
       <form class="quick-add" id="quick-add" autocomplete="off">
         <span class="icon" data-icon="plus"></span>

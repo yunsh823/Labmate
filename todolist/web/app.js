@@ -33,6 +33,8 @@ const LABEL = Object.fromEntries(VIEWS.filter(Boolean).map(v => [v.id, v.label])
 const RECURRENCE = { daily: "매일", weekly: "매주", monthly: "매월" };
 const WEEKDAYS = "일월화수목금토";
 
+// The tray popup (popup.html) reuses this file: Today only, no sidebar or detail panel.
+const POPUP = document.body.classList.contains("popup");
 const S = { view: "today", project: "", selected: null, data: null };
 const $ = id => document.getElementById(id);
 const api = () => window.pywebview.api;
@@ -61,7 +63,8 @@ function hue(name) {
   // Golden-angle spread so names differing by one character ("논문A"/"논문B") get distinct colors.
   let h = 0;
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return Math.round((h * 137.508) % 360);
+  h = Math.round((h * 137.508) % 360);
+  return h >= 10 && h <= 50 ? h + 140 : h;  // skip the orange/clay band
 }
 
 // --- rendering -------------------------------------------------------------
@@ -72,8 +75,15 @@ async function load() {
   render();
 }
 
+function applyTheme(theme) {
+  if (theme === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.dataset.theme = theme;
+  document.querySelectorAll("[data-theme-set]").forEach(b => b.setAttribute("aria-checked", b.dataset.themeSet === theme));
+}
+
 function render() {
-  renderNav();
+  applyTheme(S.data.theme);
+  if (!POPUP) renderNav();
   renderHeader();
   renderList();
 }
@@ -93,16 +103,46 @@ function renderNav() {
     : '<li class="empty-projects">할 일 편집에서 프로젝트를 지정하면 여기에 모여요</li>';
 }
 
+function fmtDay(d, withMonth = true) {
+  return `${withMonth ? `${d.getMonth() + 1}월 ` : ""}${d.getDate()}일 (${WEEKDAYS[d.getDay()]})`;
+}
+
+function stat(n, label, cls = "") {
+  return `<div class="stat ${cls}"><b>${n}</b><span>${label}</span></div>`;
+}
+
 function renderHeader() {
-  const { today, counts } = S.data;
-  const filter = S.project ? ` · ${S.project}` : "";
-  $("title").textContent = LABEL[S.view] + filter;
+  const { today, tasks } = S.data;
+  const t = parseDate(today);
+  $("title").textContent = LABEL[S.view] + (S.project ? ` · ${S.project}` : "");
+
+  let date = "";
   if (S.view === "today") {
-    const d = parseDate(today);
-    $("subtitle").textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEKDAYS[d.getDay()]}요일 · 남은 할 일 ${counts.today}개`;
-  } else {
-    $("subtitle").textContent = `${S.data.tasks.length}개`;
+    date = fmtDay(t);
+  } else if (S.view === "week") {
+    // Monday-to-Sunday week containing today.
+    const mon = new Date(t);
+    mon.setDate(t.getDate() - ((t.getDay() + 6) % 7));
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    date = `${fmtDay(mon)} – ${fmtDay(sun, sun.getMonth() !== mon.getMonth())}`;
   }
+  $("subtitle").textContent = date;
+
+  const open = tasks.filter(x => !x.done).length;
+  if (POPUP) {
+    $("stats").innerHTML = stat(open, "남은 할 일");
+  } else if (S.view === "today") {
+    const overdue = tasks.filter(x => !x.done && x.due_date && daysUntil(x.due_date) < 0).length;
+    $("stats").innerHTML = stat(open, "남은 할 일")
+      + (overdue ? stat(overdue, "지난 마감", "danger") : "")
+      + stat(tasks.length - open, "완료", "muted");
+  } else if (S.view === "trash") {
+    $("stats").innerHTML = stat(tasks.length, "항목", "muted");
+  } else {
+    $("stats").innerHTML = stat(tasks.length, S.view === "done" ? "완료" : "할 일");
+  }
+  if (POPUP) return;
   const canAdd = BUCKETS.includes(S.view);
   $("quick-add").hidden = !canAdd;
   if (canAdd) $("quick-input").placeholder = `'${LABEL[S.view]}'에 할 일 추가`;
@@ -146,15 +186,16 @@ function taskRow(t) {
   if (t.due_date && !t.done) {
     const n = daysUntil(t.due_date);
     const d = parseDate(t.due_date);
-    const date = `${d.getMonth() + 1}/${d.getDate()}`;
+    const date = `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAYS[d.getDay()]})`;
     if (n < 0) meta.push(`<span class="chip danger">D+${-n} · ${date}</span>`);
-    else if (n === 0) meta.push(`<span class="chip warn">D-day</span>`);
+    else if (n === 0) meta.push(`<span class="chip today">D-day</span>`);
     else meta.push(`<span class="chip">D-${n} · ${date}</span>`);
   }
+  if (t.due_time) meta.push(`<span class="info time">${icon("clock")}${t.due_time}</span>`);
   if (t.project) meta.push(`<span class="chip project" style="--h:${hue(t.project)}">${esc(t.project)}</span>`);
-  if (t.recurrence) meta.push(`${icon("repeat")}${RECURRENCE[t.recurrence]}`);
-  if (t.notes) meta.push(icon("note"));
-  if (S.view === "today" && t.bucket !== "today" && !t.done) meta.push(`<span>${LABEL[t.bucket]}</span>`);
+  if (t.recurrence) meta.push(`<span class="info">${icon("repeat")}${RECURRENCE[t.recurrence]}</span>`);
+  if (t.notes) meta.push(`<span class="info" title="메모">${icon("note")}</span>`);
+  if (S.view === "today" && t.bucket !== "today" && !t.done) meta.push(`<span class="info">${LABEL[t.bucket]}</span>`);
 
   const trash = S.view === "trash";
   const lead = trash ? "" : `<div class="check" data-check role="checkbox" aria-checked="${t.done}" aria-label="완료">${icon("check")}</div>`;
@@ -163,11 +204,11 @@ function taskRow(t) {
          <button class="ghost icon-btn" data-restore title="복원" aria-label="복원">${icon("restore")}</button>
          <button class="ghost icon-btn danger" data-purge title="영구 삭제" aria-label="영구 삭제">${icon("trash")}</button>
        </div>`
-    : t.due_time ? `<div class="time">${t.due_time}</div>` : "";
+    : "";
   return `
     <div class="task ${t.done ? "done" : ""} ${t.id === S.selected ? "selected" : ""}" data-id="${t.id}">
       ${lead}
-      <div class="body"><div class="t">${esc(t.title)}</div><div class="meta">${meta.join("")}</div></div>
+      <div class="body"><span class="t">${esc(t.title)}</span>${meta.join("")}</div>
       ${tail}
     </div>`;
 }
@@ -239,20 +280,22 @@ function bindDetail() {
 
 // --- events ----------------------------------------------------------------
 
-function bind() {
-  $("nav").addEventListener("click", e => {
-    const li = e.target.closest("[data-view]");
-    if (!li) return;
-    S.view = li.dataset.view;
-    closeDetail();
-    load();
-  });
-  $("projects").addEventListener("click", e => {
-    const li = e.target.closest("[data-project]");
-    if (!li) return;
-    S.project = S.project === li.dataset.project ? "" : li.dataset.project;
-    load();
-  });
+function bindPopup() {
+  $("open-main").onclick = () => api().show_main(null);
+  // Behave like a flyout: hide when focus leaves, refresh when shown.
+  window.addEventListener("blur", () => api().hide_popup());
+  document.addEventListener("keydown", e => { if (e.key === "Escape") api().hide_popup(); });
+}
+
+// Called from Python when a popup row is clicked.
+window.focusTask = async id => {
+  S.view = "today";
+  S.project = "";
+  await load();
+  openDetail(id);
+};
+
+function bindShared() {
   $("quick-add").addEventListener("submit", async e => {
     e.preventDefault();
     const title = $("quick-input").value.trim();
@@ -278,7 +321,37 @@ function bind() {
       if (confirm("이 항목을 영구 삭제할까요? 되돌릴 수 없습니다.")) { await api().purge(id); await load(); }
       return;
     }
+    if (POPUP) return api().show_main(id);
     openDetail(id);
+  });
+  // Other windows may have changed data; refresh whenever this one gets focus.
+  window.addEventListener("focus", () => { if (S.data) load(); });
+  // Re-evaluate Today/D-day when the date rolls over while the app is open.
+  setInterval(() => { if (S.data && localToday() !== S.data.today) load(); }, 60000);
+}
+
+function bind() {
+  bindShared();
+  if (POPUP) return bindPopup();
+  $("nav").addEventListener("click", e => {
+    const li = e.target.closest("[data-view]");
+    if (!li) return;
+    S.view = li.dataset.view;
+    closeDetail();
+    load();
+  });
+  $("theme").addEventListener("click", async e => {
+    const b = e.target.closest("[data-theme-set]");
+    if (!b) return;
+    S.data.theme = b.dataset.themeSet;
+    applyTheme(S.data.theme);
+    await api().set_theme(S.data.theme);
+  });
+  $("projects").addEventListener("click", e => {
+    const li = e.target.closest("[data-project]");
+    if (!li) return;
+    S.project = S.project === li.dataset.project ? "" : li.dataset.project;
+    load();
   });
   document.addEventListener("keydown", async e => {
     const typing = e.target.matches("input, textarea, select");
@@ -291,8 +364,6 @@ function bind() {
     }
   });
   bindDetail();
-  // Re-evaluate Today/D-day when the date rolls over while the app is open.
-  setInterval(() => { if (S.data && localToday() !== S.data.today) load(); }, 60000);
 }
 
 document.querySelectorAll("[data-icon]").forEach(el => { el.outerHTML = icon(el.dataset.icon); });

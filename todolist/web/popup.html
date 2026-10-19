@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ToDoList 오늘</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="popup">
+  <div class="pop">
+    <header class="head">
+      <div class="head-left">
+        <h1 id="title"></h1>
+        <span class="head-date" id="subtitle"></span>
+      </div>
+      <div class="stats" id="stats"></div>
+    </header>
+    <form class="quick-add" id="quick-add" autocomplete="off">
+      <span class="icon" data-icon="plus"></span>
+      <input id="quick-input" placeholder="오늘 할 일 추가" aria-label="할 일 추가">
+    </form>
+    <div class="list" id="list"></div>
+    <footer class="pop-foot">
+      <button class="ghost" id="open-main">전체 창 열기</button>
+    </footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

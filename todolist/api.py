@@ -10,6 +10,8 @@ from datetime import date
 
 from .db import BUCKETS, VIEWS, Store, Task
 
+THEMES = ("system", "light", "dark")
+
 
 def _task_dict(t: Task) -> dict:
     d = asdict(t)
@@ -18,9 +20,18 @@ def _task_dict(t: Task) -> dict:
 
 
 class Api:
-    def __init__(self, store: Store):
+    def __init__(self, store: Store, shell=None):
         self._store = store
+        self._shell = shell  # desktop.Desktop when running as the app; None in tests
         self._lock = threading.Lock()
+
+    def _open_today(self) -> int:
+        with self._lock:
+            return self._store.count("today")
+
+    def _changed(self) -> None:
+        if self._shell:
+            self._shell.refresh_icon()
 
     def state(self, view: str, project: str | None = None) -> dict:
         """Everything one render needs, in a single round trip."""
@@ -32,12 +43,21 @@ class Api:
                 "tasks": [_task_dict(t) for t in self._store.list_view(view, project, today)],
                 "counts": {v: self._store.count(v, project, today) for v in VIEWS},
                 "projects": self._store.projects(),
+                "theme": self._store.get_setting("theme", "system"),
             }
+
+    def set_theme(self, theme: str) -> None:
+        if theme not in THEMES:
+            raise ValueError(theme)
+        with self._lock:
+            self._store.set_setting("theme", theme)
 
     def add(self, title: str, bucket: str = "today", project: str = "") -> int:
         with self._lock:
-            return self._store.add(title, bucket=bucket if bucket in BUCKETS else "today",
-                                   project=project or "")
+            task_id = self._store.add(title, bucket=bucket if bucket in BUCKETS else "today",
+                                      project=project or "")
+        self._changed()
+        return task_id
 
     def update(self, task_id: int, fields: dict) -> None:
         # Empty form values from HTML inputs mean "unset".
@@ -49,19 +69,33 @@ class Api:
             fields["due_time"] = None  # a time without a date is meaningless
         with self._lock:
             self._store.update(task_id, **fields)
+        self._changed()
 
     def set_done(self, task_id: int, done: bool) -> None:
         with self._lock:
             self._store.set_done(task_id, done)
+        self._changed()
 
     def delete(self, task_id: int) -> None:
         with self._lock:
             self._store.delete(task_id)
+        self._changed()
 
     def restore(self, task_id: int) -> None:
         with self._lock:
             self._store.restore(task_id)
+        self._changed()
 
     def purge(self, task_id: int) -> None:
         with self._lock:
             self._store.purge(task_id)
+
+    # --- window control (no-ops without a desktop shell) --------------------
+
+    def show_main(self, task_id: int | None = None) -> None:
+        if self._shell:
+            self._shell.show_main(task_id)
+
+    def hide_popup(self) -> None:
+        if self._shell:
+            self._shell.hide_popup()
