@@ -1,0 +1,26 @@
+# Secrets — never commit
+apiKey.txt
+credentials*.json
+token*.json
+*.key
+
+# Local data
+*.db
+*.db-journal
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Build output
+build/
+dist/
+*.spec
+
+# Editors
+.vscode/
+.idea/
+
+# Local tooling
+.claude/

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ToDoList</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <nav class="sidebar">
+      <ul class="nav" id="nav"></ul>
+      <div class="nav-label">프로젝트</div>
+      <ul class="nav" id="projects"></ul>
+    </nav>
+
+    <main class="main">
+      <header class="head">
+        <div>
+          <h1 id="title"></h1>
+          <div class="sub" id="subtitle"></div>
+        </div>
+      </header>
+      <form class="quick-add" id="quick-add" autocomplete="off">
+        <span class="icon" data-icon="plus"></span>
+        <input id="quick-input" placeholder="할 일 추가" aria-label="할 일 추가">
+      </form>
+      <div class="list" id="list"></div>
+      <div class="hint" id="hint"></div>
+    </main>
+
+    <aside class="detail" id="detail" hidden>
+      <div class="detail-top">
+        <button class="ghost icon-btn" id="detail-close" aria-label="닫기"><span class="icon" data-icon="x"></span></button>
+      </div>
+      <input class="detail-title" id="f-title" aria-label="제목">
+      <label class="field"><span>분류</span>
+        <select id="f-bucket">
+          <option value="today">오늘</option><option value="week">이번 주</option>
+          <option value="later">나중에</option><option value="someday">언젠가</option>
+        </select>
+      </label>
+      <label class="field"><span>프로젝트</span>
+        <input id="f-project" list="project-options" placeholder="없음">
+        <datalist id="project-options"></datalist>
+      </label>
+      <div class="field"><span>마감</span>
+        <div class="row-2">
+          <input type="date" id="f-date" aria-label="마감일">
+          <input type="time" id="f-time" aria-label="시간">
+        </div>
+      </div>
+      <label class="field"><span>반복</span>
+        <select id="f-recurrence">
+          <option value="">없음</option><option value="daily">매일</option>
+          <option value="weekly">매주</option><option value="monthly">매월</option>
+        </select>
+      </label>
+      <label class="field grow"><span>메모</span>
+        <textarea id="f-notes" placeholder="메모"></textarea>
+      </label>
+      <button class="ghost danger" id="detail-delete"><span class="icon" data-icon="trash"></span>휴지통으로</button>
+    </aside>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
