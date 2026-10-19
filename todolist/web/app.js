@@ -4,7 +4,7 @@ const ICONS = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   week: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M7 15h10"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
-  inbox: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 13h4l1 3h6l1-3h4"/>',
+  bulb: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
   done: '<circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
@@ -23,7 +23,7 @@ const VIEWS = [
   { id: "today", label: "오늘", icon: "sun" },
   { id: "week", label: "이번 주", icon: "week" },
   { id: "later", label: "나중에", icon: "clock" },
-  { id: "someday", label: "언젠가", icon: "inbox" },
+  { id: "someday", label: "아이디어", icon: "bulb" },
   null,
   { id: "done", label: "완료", icon: "done" },
   { id: "trash", label: "휴지통", icon: "trash" },
@@ -140,12 +140,12 @@ function renderHeader() {
   } else if (S.view === "trash") {
     $("stats").innerHTML = stat(tasks.length, "항목", "muted");
   } else {
-    $("stats").innerHTML = stat(tasks.length, S.view === "done" ? "완료" : "할 일");
+    $("stats").innerHTML = stat(tasks.length, { done: "완료", someday: "아이디어" }[S.view] || "할 일");
   }
   if (POPUP) return;
   const canAdd = BUCKETS.includes(S.view);
   $("quick-add").hidden = !canAdd;
-  if (canAdd) $("quick-input").placeholder = `'${LABEL[S.view]}'에 할 일 추가`;
+  if (canAdd) $("quick-input").placeholder = S.view === "someday" ? "떠오른 아이디어 적기" : `'${LABEL[S.view]}'에 할 일 추가`;
   $("hint").textContent = S.view === "trash"
     ? "30일이 지나면 자동으로 영구 삭제됩니다."
     : "클릭: 상세 편집 · Delete: 휴지통으로 · Esc: 닫기";
@@ -167,7 +167,8 @@ function renderList() {
     }
   } else {
     html = tasks.map(taskRow).join("") || empty(
-      S.view === "trash" ? "휴지통이 비어 있어요" : S.view === "done" ? "완료한 할 일이 여기에 모여요" : `'${LABEL[S.view]}'에 둘 할 일을 추가해 보세요`, "");
+      S.view === "trash" ? "휴지통이 비어 있어요" : S.view === "done" ? "완료한 할 일이 여기에 모여요"
+        : S.view === "someday" ? "떠오른 아이디어를 적어 두세요" : `'${LABEL[S.view]}'에 둘 할 일을 추가해 보세요`, "");
   }
   $("list").innerHTML = html;
 }
