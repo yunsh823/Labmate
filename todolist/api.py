@@ -63,6 +63,7 @@ class Api:
                 "projects": self._store.projects(),
                 "settings": {k: self._store.get_setting(k, v) for k, v in DEFAULTS.items()},
                 "events": self._gcal.today_events if view == "today" else [],
+                "gcal_reauth": self._gcal.needs_reauth,
             }
 
     def _setting(self, key: str) -> str:
@@ -153,7 +154,7 @@ class Api:
     def gcal_status(self) -> dict:
         g = self._gcal
         return {"has_client": g.has_client_file(), "connected": g.connected(), "account": g.account,
-                "last_sync": g.last_sync, "error": g.error}
+                "last_sync": g.last_sync, "error": g.error, "needs_reauth": g.needs_reauth}
 
     def gcal_import_client(self) -> dict:
         path = self._shell.pick_json_file() if self._shell else None

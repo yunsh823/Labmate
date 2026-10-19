@@ -198,6 +198,18 @@ def test_today_events_exclude_app_events(env):
     assert sync.account == "me@example.com"
 
 
+def test_expired_sign_in_asks_for_reconnect(env):
+    from google.auth.exceptions import RefreshError
+    store, sync, cal = env
+
+    def expired(updated_min):
+        raise RefreshError("invalid_grant: Token has been expired or revoked.")
+    cal.app_events = expired
+    with pytest.raises(RefreshError):
+        run(sync, cal)
+    assert sync.needs_reauth and sync.error is None
+
+
 def test_migrates_v1_database(tmp_path):
     path = tmp_path / "old.db"
     conn = sqlite3.connect(path)

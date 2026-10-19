@@ -160,6 +160,7 @@ class CalendarSync:
         self.last_sync: str | None = None
         self.last_pull: datetime | None = None
         self.error: str | None = None
+        self.needs_reauth = False  # sign-in expired/revoked; the user must connect again
         self.account: str | None = None
         self.today_events: list[dict] = []
 
@@ -185,6 +186,8 @@ class CalendarSync:
                                       success_message="ToDoList: Google Calendar connected. You can close this tab.")
         token_path().write_text(creds.to_json(), encoding="utf-8")
         self._client = None
+        self.needs_reauth = False
+        self.error = None
 
     def disconnect(self) -> None:
         token_path().unlink(missing_ok=True)
@@ -194,6 +197,7 @@ class CalendarSync:
         self.account = None
         self.today_events = []
         self.last_sync = self.last_pull = self.error = None
+        self.needs_reauth = False
 
     def _get_client(self):
         if self._client is None:
@@ -217,7 +221,14 @@ class CalendarSync:
                 self._sync(client or self._get_client(), now or datetime.now().astimezone())
                 self.error = None
             except Exception as e:  # network/auth problems surface in Settings
-                self.error = str(e) or type(e).__name__
+                from google.auth.exceptions import RefreshError
+                if isinstance(e, RefreshError):
+                    # Expired or revoked sign-in (every 7 days while the OAuth app is in testing).
+                    self.needs_reauth = True
+                    self._client = None
+                    self.error = None
+                else:
+                    self.error = str(e) or type(e).__name__
                 raise
 
     def _sync(self, cal, now: datetime) -> None:
