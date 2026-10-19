@@ -17,8 +17,9 @@ SETTINGS = {
     "lang": ("ko", "en"),
     "sidebar": ("expanded", "collapsed"),
     "font": None,  # "" = app default, otherwise a system font family name
+    "remind": ("off", "5", "10", "15", "30"),  # minutes before a timed task/event
 }
-DEFAULTS = {"theme": "system", "lang": "ko", "sidebar": "expanded", "font": ""}
+DEFAULTS = {"theme": "system", "lang": "ko", "sidebar": "expanded", "font": "", "remind": "10"}
 
 
 def _task_dict(t: Task) -> dict:
@@ -43,6 +44,14 @@ class Api:
         if self._shell:
             self._shell.refresh_icon()
             self._shell.request_sync()
+
+    def _reminder_items(self) -> tuple[list[Task], list[dict]]:
+        with self._lock:
+            return self._store.timed_tasks_on(date.today()), list(self._gcal.today_events)
+
+    def app_info(self) -> dict:
+        shell = self._shell
+        return {"hotkey": shell.HOTKEY_LABEL if shell else "", "hotkey_ok": bool(shell and shell.hotkey_ok)}
 
     def _sync_calendar(self) -> None:
         """One calendar sync pass; errors are kept for the Settings page, not raised."""

@@ -44,6 +44,10 @@ const STRINGS = {
     general: "일반", theme: "테마", themeSystem: "시스템", themeLight: "라이트", themeDark: "다크",
     language: "언어", font: "글꼴", fontDefault: "기본 (Pretendard)",
     events: "일정", allDay: "종일",
+    notifications: "알림", remind: "일정 시작 전 알림", remindOff: "끄기", minutes: n => `${n}분`,
+    remindDesc: "시간이 정해진 오늘 할 일과 캘린더 일정",
+    hotkey: "빠른 입력 단축키", hotkeyDesc: "어디서든 눌러 오늘 할 일을 바로 추가",
+    hotkeyBusy: "다른 프로그램이 사용 중이라 쓸 수 없어요",
     gcal: "구글 캘린더", gcalAccount: "계정 연결",
     gcalNeedClient: "OAuth 클라이언트 파일(client_secret.json)을 먼저 가져오세요.",
     gcalImport: "파일 가져오기", gcalConnect: "연결", gcalConnecting: "브라우저에서 로그인하세요…",
@@ -75,6 +79,10 @@ const STRINGS = {
     general: "General", theme: "Theme", themeSystem: "System", themeLight: "Light", themeDark: "Dark",
     language: "Language", font: "Font", fontDefault: "Default (Pretendard)",
     events: "Events", allDay: "All day",
+    notifications: "Notifications", remind: "Remind before start", remindOff: "Off", minutes: n => `${n} min`,
+    remindDesc: "Timed tasks and calendar events today",
+    hotkey: "Quick add shortcut", hotkeyDesc: "Press anywhere to add a task for today",
+    hotkeyBusy: "Unavailable — another program is using it",
     gcal: "Google Calendar", gcalAccount: "Account",
     gcalNeedClient: "Import the OAuth client file (client_secret.json) first.",
     gcalImport: "Import file", gcalConnect: "Connect", gcalConnecting: "Sign in in your browser…",
@@ -326,6 +334,12 @@ async function renderSettings() {
   $("set-font").innerHTML = `<option value="">${T.fontDefault}</option>`
     + S.fonts.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("");
   $("set-font").value = font;
+  $("set-remind").innerHTML = ["off", "5", "10", "15", "30"].map(v =>
+    `<button data-value="${v}" aria-pressed="${v === S.data.settings.remind}">${v === "off" ? T.remindOff : T.minutes(v)}</button>`).join("");
+  const info = await api().app_info();
+  $("hotkey-desc").textContent = info.hotkey_ok ? T.hotkeyDesc : T.hotkeyBusy;
+  $("hotkey-desc").classList.toggle("setting-error", !info.hotkey_ok);
+  $("hotkey-key").textContent = info.hotkey;
   renderGcal(await api().gcal_status());
 }
 
@@ -361,6 +375,10 @@ function bindSettings() {
     if (b) setSetting("lang", b.dataset.value).then(render);
   });
   $("set-font").addEventListener("change", e => setSetting("font", e.target.value));
+  $("set-remind").addEventListener("click", e => {
+    const b = e.target.closest("[data-value]");
+    if (b) setSetting("remind", b.dataset.value).then(renderSettings);
+  });
   $("gcal-actions").addEventListener("click", async e => {
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (!act) return;
@@ -454,6 +472,9 @@ function bindPopup() {
 
 // Called from Python after a calendar sync changed tasks or today's events.
 window.reloadData = () => { if (S.data && S.view !== "settings") load(); };
+
+// Called from Python for the global quick-add hotkey.
+window.focusQuickAdd = () => { $("quick-input").focus(); $("quick-input").select(); };
 
 // Called from Python when a popup row is clicked.
 window.focusTask = async id => {

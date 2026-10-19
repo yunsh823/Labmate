@@ -229,6 +229,10 @@ ul { list-style: none; margin: 0; padding: 0; }
 .setting-desc { font-size: 13px; color: var(--text-2); margin-top: 4px; }
 .setting-error { color: var(--danger); margin-top: 4px; }
 .setting-actions { display: flex; gap: 8px; flex: none; }
+.kbd {
+  font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--field); white-space: nowrap;
+}
 .btn {
   border: 1px solid var(--line); background: var(--panel); border-radius: var(--radius);
   padding: 6px 14px; font-size: 13px; cursor: pointer; color: var(--text);

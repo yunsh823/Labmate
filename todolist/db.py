@@ -237,6 +237,13 @@ class Store:
         ).fetchall()
         return [r[0] for r in rows]
 
+    def timed_tasks_on(self, day: date) -> list[Task]:
+        rows = self.conn.execute(
+            "SELECT * FROM tasks WHERE deleted_at IS NULL AND done = 0 AND due_date = ? AND due_time IS NOT NULL",
+            (day.isoformat(),),
+        ).fetchall()
+        return [Task.from_row(r) for r in rows]
+
     # --- Google Calendar sync bookkeeping ------------------------------------
     # These bypass update() on purpose: they must not bump updated_at, or every
     # sync would look like a local edit and be pushed again.

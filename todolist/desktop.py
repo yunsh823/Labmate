@@ -4,6 +4,8 @@ import ctypes
 import sys
 import threading
 import time
+from ctypes import wintypes
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pystray
@@ -12,6 +14,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .api import Api
 from .db import Store, data_dir
+from .reminders import due_reminders
 
 WEB_DIR = Path(__file__).parent / "web"
 POPUP_W, POPUP_H, MARGIN = 380, 560, 12
@@ -19,9 +22,11 @@ ACCENT = (79, 107, 237)
 
 TRAY_TEXT = {
     "ko": {"today": "오늘 할 일", "main": "전체 창 열기", "quit": "종료",
-           "open": "ToDoList · 오늘 남은 할 일 {n}개", "clear": "ToDoList · 오늘 할 일을 모두 끝냈어요"},
+           "open": "ToDoList · 오늘 남은 할 일 {n}개", "clear": "ToDoList · 오늘 할 일을 모두 끝냈어요",
+           "soon": "{m}분 후 시작", "soon_many": "곧 시작하는 일정 {n}개"},
     "en": {"today": "Today", "main": "Open full window", "quit": "Quit",
-           "open": "ToDoList · {n} left today", "clear": "ToDoList · All done for today"},
+           "open": "ToDoList · {n} left today", "clear": "ToDoList · All done for today",
+           "soon": "Starts in {m} min", "soon_many": "{n} items starting soon"},
 }
 
 
@@ -77,6 +82,8 @@ def _hide_from_taskbar(window: webview.Window) -> None:
 
 
 class Desktop:
+    HOTKEY_LABEL = "Ctrl + Alt + T"
+
     def __init__(self, store: Store):
         self.api = Api(store, shell=self)
         self.quitting = False
@@ -84,6 +91,8 @@ class Desktop:
         self.popup_hidden_at = 0.0
         self.popup_shown_at = 0.0
         self._sync_wakeup = threading.Event()
+        self.hotkey_ok = False
+        self._reminded: set[str] = set()
 
         self.main = webview.create_window(
             "ToDoList", url=str(WEB_DIR / "index.html"), js_api=self.api,
@@ -114,10 +123,44 @@ class Desktop:
     def _on_started(self) -> None:
         _hide_from_taskbar(self.popup)
         threading.Thread(target=self._sync_loop, daemon=True).start()
-        # Keep the tray count right across midnight even if nothing is edited.
+        if sys.platform == "win32":
+            threading.Thread(target=self._hotkey_loop, daemon=True).start()
+        # Tray count (also across midnight) and reminders.
         while not self.quitting:
             self.refresh_icon()
-            time.sleep(60)
+            self._check_reminders()
+            time.sleep(30)
+
+    def _hotkey_loop(self) -> None:
+        """Global Ctrl+Alt+T opens the popup ready to type a task."""
+        MOD_ALT, MOD_CONTROL, MOD_NOREPEAT, WM_HOTKEY = 0x1, 0x2, 0x4000, 0x0312
+        user32 = ctypes.windll.user32
+        # Registered to this thread (no window), so WM_HOTKEY arrives in its message queue.
+        self.hotkey_ok = bool(user32.RegisterHotKey(None, 1, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, ord("T")))
+        if not self.hotkey_ok:
+            return  # taken by another program; Settings shows it as unavailable
+        msg = wintypes.MSG()
+        while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+            if msg.message == WM_HOTKEY:
+                self.quick_add()
+
+    def _check_reminders(self) -> None:
+        minutes = self.api._setting("remind")
+        if minutes == "off":
+            return
+        tasks, events = self.api._reminder_items()
+        now = datetime.now()
+        due = due_reminders(now, tasks, events, timedelta(minutes=int(minutes)), self._reminded)
+        if not due:
+            return
+        self._reminded.update(key for key, _, _ in due)
+        lines = [f"{start:%H:%M}  {title}" for _, title, start in due]
+        if len(due) == 1:
+            left = max(1, round((due[0][2] - now).total_seconds() / 60))
+            title = self._text("soon").format(m=left)
+        else:
+            title = self._text("soon_many").format(n=len(due))
+        self.icon.notify("\n".join(lines), title)
 
     def _sync_loop(self) -> None:
         """Calendar sync at start, every 5 minutes, and shortly after local edits."""
@@ -179,6 +222,14 @@ class Desktop:
         # blurs it immediately; ignore that so the popup doesn't vanish on open.
         if time.monotonic() - self.popup_shown_at > 0.5:
             self.hide_popup()
+
+    def quick_add(self) -> None:
+        if not self.popup_visible:
+            self.popup.move(*_popup_position())
+            self.popup_shown_at = time.monotonic()
+            self.popup.show()
+            self.popup_visible = True
+        self.popup.evaluate_js("focusQuickAdd()")
 
     def hide_popup(self) -> None:
         if not self.popup_visible:

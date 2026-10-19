@@ -48,7 +48,8 @@ def test_project_filter_passthrough(api):
 
 
 def test_settings_persist_and_validate(api, tmp_path):
-    assert api.state("today")["settings"] == {"theme": "system", "lang": "ko", "sidebar": "expanded", "font": ""}
+    assert api.state("today")["settings"] == {"theme": "system", "lang": "ko", "sidebar": "expanded", "font": "",
+                                              "remind": "10"}
     api.set_setting("theme", "dark")
     api.set_setting("lang", "en")
     api.set_setting("font", "Malgun Gothic")
