@@ -75,6 +75,10 @@ class Task:
     done: bool
     completed_at: str | None
     deleted_at: str | None
+    updated_at: str = ""
+    gcal_event_id: str | None = None   # Google Calendar event this task is mirrored to
+    gcal_synced_at: str | None = None  # local time when task and event last matched
+    gcal_etag: str | None = None       # event version (Google etag) at that moment
 
     @classmethod
     def from_row(cls, r: sqlite3.Row) -> "Task":
@@ -83,12 +87,14 @@ class Task:
             project=r["project"],
             due_date=date.fromisoformat(r["due_date"]) if r["due_date"] else None,
             due_time=r["due_time"], recurrence=r["recurrence"], done=bool(r["done"]),
-            completed_at=r["completed_at"], deleted_at=r["deleted_at"],
+            completed_at=r["completed_at"], deleted_at=r["deleted_at"], updated_at=r["updated_at"],
+            gcal_event_id=r["gcal_event_id"], gcal_synced_at=r["gcal_synced_at"], gcal_etag=r["gcal_etag"],
         )
 
 
 def _now() -> str:
-    return datetime.now().isoformat(timespec="seconds")
+    # Microseconds so "edited after last sync" comparisons can't tie within a second.
+    return datetime.now().isoformat(timespec="microseconds")
 
 
 def _to_db(key, value):
@@ -103,7 +109,16 @@ class Store:
         self.conn = sqlite3.connect(str(path or data_dir() / "todo.db"), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
-        self.conn.execute("PRAGMA user_version = 1")
+        self._migrate()
+
+    def _migrate(self) -> None:
+        version = self.conn.execute("PRAGMA user_version").fetchone()[0]
+        if version < 2:
+            cols = {r[1] for r in self.conn.execute("PRAGMA table_info(tasks)")}
+            for col in ("gcal_event_id", "gcal_synced_at", "gcal_etag"):
+                if col not in cols:
+                    self.conn.execute(f"ALTER TABLE tasks ADD COLUMN {col} TEXT")
+        self.conn.execute("PRAGMA user_version = 2")
         self.conn.commit()
 
     # --- CRUD ---------------------------------------------------------------
@@ -221,6 +236,43 @@ class Store:
             "SELECT DISTINCT project FROM tasks WHERE project != '' AND deleted_at IS NULL ORDER BY project"
         ).fetchall()
         return [r[0] for r in rows]
+
+    # --- Google Calendar sync bookkeeping ------------------------------------
+    # These bypass update() on purpose: they must not bump updated_at, or every
+    # sync would look like a local edit and be pushed again.
+
+    def calendar_candidates(self) -> list[Task]:
+        """Tasks the sync must look at: linked ones, plus timed open ones not yet linked."""
+        rows = self.conn.execute(
+            "SELECT * FROM tasks WHERE gcal_event_id IS NOT NULL OR (deleted_at IS NULL AND done = 0 "
+            "AND due_date IS NOT NULL AND due_time IS NOT NULL)"
+        ).fetchall()
+        return [Task.from_row(r) for r in rows]
+
+    def link_event(self, task_id: int, event_id: str | None, etag: str | None = None) -> None:
+        self.conn.execute(
+            "UPDATE tasks SET gcal_event_id = ?, gcal_etag = ?, gcal_synced_at = ? WHERE id = ?",
+            (event_id, etag, _now() if event_id else None, task_id),
+        )
+        self.conn.commit()
+
+    def mark_synced(self, task_id: int, etag: str) -> None:
+        self.conn.execute("UPDATE tasks SET gcal_etag = ?, gcal_synced_at = ? WHERE id = ?", (etag, _now(), task_id))
+        self.conn.commit()
+
+    def apply_remote(self, task_id: int, title: str, due_date: date, due_time: str | None, etag: str) -> None:
+        """Take title/date/time from the calendar event without it counting as a local edit."""
+        now = _now()
+        self.conn.execute(
+            "UPDATE tasks SET title = ?, due_date = ?, due_time = ?, updated_at = ?, gcal_synced_at = ?, gcal_etag = ? "
+            "WHERE id = ?",
+            (title, due_date.isoformat(), due_time, now, now, etag, task_id),
+        )
+        self.conn.commit()
+
+    def unlink_all(self) -> None:
+        self.conn.execute("UPDATE tasks SET gcal_event_id = NULL, gcal_synced_at = NULL, gcal_etag = NULL")
+        self.conn.commit()
 
     # --- settings -----------------------------------------------------------
 

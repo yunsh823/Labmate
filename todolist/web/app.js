@@ -43,7 +43,14 @@ const STRINGS = {
     openMain: "전체 창 열기",
     general: "일반", theme: "테마", themeSystem: "시스템", themeLight: "라이트", themeDark: "다크",
     language: "언어", font: "글꼴", fontDefault: "기본",
-    weekdays: "일월화수목금토",
+    events: "일정", allDay: "종일",
+    gcal: "구글 캘린더", gcalAccount: "계정 연결",
+    gcalNeedClient: "OAuth 클라이언트 파일(client_secret.json)을 먼저 가져오세요.",
+    gcalImport: "파일 가져오기", gcalConnect: "연결", gcalConnecting: "브라우저에서 로그인하세요…",
+    gcalDisconnect: "연결 해제", gcalSyncNow: "지금 동기화", gcalNotConnected: "연결되지 않음",
+    gcalConnected: a => `${a ? a + " · " : ""}연결됨`, gcalLastSync: t => `마지막 동기화 ${t}`, gcalError: "동기화 오류",
+    gcalFailed: "연결하지 못했어요. 다시 시도하세요.",
+    confirmDisconnect: "구글 캘린더 연결을 해제할까요? 이미 올라간 일정은 캘린더에 그대로 남습니다.",
     day: (d, withMonth = true) => `${withMonth ? `${d.getMonth() + 1}월 ` : ""}${d.getDate()}일 (${"일월화수목금토"[d.getDay()]})`,
     chipDate: d => `${d.getMonth() + 1}/${d.getDate()}(${"일월화수목금토"[d.getDay()]})`,
   },
@@ -66,6 +73,14 @@ const STRINGS = {
     openMain: "Open full window",
     general: "General", theme: "Theme", themeSystem: "System", themeLight: "Light", themeDark: "Dark",
     language: "Language", font: "Font", fontDefault: "Default",
+    events: "Events", allDay: "All day",
+    gcal: "Google Calendar", gcalAccount: "Account",
+    gcalNeedClient: "Import the OAuth client file (client_secret.json) first.",
+    gcalImport: "Import file", gcalConnect: "Connect", gcalConnecting: "Sign in in your browser…",
+    gcalDisconnect: "Disconnect", gcalSyncNow: "Sync now", gcalNotConnected: "Not connected",
+    gcalConnected: a => `${a ? a + " · " : ""}Connected`, gcalLastSync: t => `Last synced ${t}`, gcalError: "Sync error",
+    gcalFailed: "Couldn't connect. Try again.",
+    confirmDisconnect: "Disconnect Google Calendar? Events already created stay in your calendar.",
     day: (d, withMonth = true) => d.toLocaleDateString("en-US", withMonth
       ? { weekday: "short", month: "short", day: "numeric" } : { weekday: "short", day: "numeric" }),
     chipDate: d => d.toLocaleDateString("en-US", { weekday: "short", month: "numeric", day: "numeric" }),
@@ -232,14 +247,27 @@ function renderList() {
     const overdue = tasks.filter(t => !t.done && t.due_date && daysUntil(t.due_date) < 0);
     const open = tasks.filter(t => !t.done && !overdue.includes(t));
     const done = tasks.filter(t => t.done);
-    html += section(T.overdue, overdue, "overdue");
-    html += overdue.length || done.length ? section(T.today, open) : open.map(taskRow).join("");
+    const events = eventsSection();
+    html += section(T.overdue, overdue, "overdue") + events;
+    html += overdue.length || done.length || events ? section(T.today, open) : open.map(taskRow).join("");
     html += section(T.doneToday, done);
     if (!open.length && !overdue.length) html = empty(done.length ? T.allDone : T.empty.today) + html;
   } else {
     html = tasks.map(taskRow).join("") || empty(T.empty[S.view]);
   }
   $("list").innerHTML = html;
+}
+
+function eventsSection() {
+  const evs = S.data.events || [];
+  if (!evs.length) return "";
+  return `<div class="section">${T.events}<span class="n">${evs.length}</span></div>` + evs.map(e => `
+    <div class="event">
+      <span class="ev-bar" style="background:${esc(e.color || "var(--accent)")}"></span>
+      <span class="ev-time">${e.all_day ? T.allDay : `${e.start}–${e.end}`}</span>
+      <span class="ev-title">${esc(e.title)}</span>
+      <span class="ev-cal">${esc(e.calendar)}</span>
+    </div>`).join("");
 }
 
 function section(title, tasks, cls = "") {
@@ -292,6 +320,25 @@ async function renderSettings() {
   $("set-font").innerHTML = `<option value="">${T.fontDefault}</option>`
     + S.fonts.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("");
   $("set-font").value = font;
+  renderGcal(await api().gcal_status());
+}
+
+function renderGcal(st, busy = false) {
+  let desc, actions;
+  if (!st.has_client) {
+    desc = T.gcalNeedClient;
+    actions = `<button class="btn" data-act="import">${T.gcalImport}</button>`;
+  } else if (!st.connected) {
+    desc = busy ? T.gcalConnecting : T.gcalNotConnected;
+    actions = `<button class="btn primary" data-act="connect" ${busy ? "disabled" : ""}>${T.gcalConnect}</button>`;
+  } else {
+    desc = T.gcalConnected(st.account) + (st.last_sync ? ` · ${T.gcalLastSync(st.last_sync)}` : "");
+    actions = `<button class="btn" data-act="sync" ${busy ? "disabled" : ""}>${T.gcalSyncNow}</button>
+               <button class="btn" data-act="disconnect">${T.gcalDisconnect}</button>`;
+  }
+  if (st.error) desc += `<div class="setting-error">${T.gcalError}: ${esc(st.error)}</div>`;
+  $("gcal-desc").innerHTML = desc;
+  $("gcal-actions").innerHTML = actions;
 }
 
 function bindSettings() {
@@ -304,6 +351,22 @@ function bindSettings() {
     if (b) setSetting("lang", b.dataset.value).then(render);
   });
   $("set-font").addEventListener("change", e => setSetting("font", e.target.value));
+  $("gcal-actions").addEventListener("click", async e => {
+    const act = e.target.closest("[data-act]")?.dataset.act;
+    if (!act) return;
+    const st = await api().gcal_status();
+    if (act === "import") return renderGcal(await api().gcal_import_client());
+    if (act === "disconnect") {
+      if (confirm(T.confirmDisconnect)) renderGcal(await api().gcal_disconnect());
+      return;
+    }
+    renderGcal(st, true);
+    try {
+      renderGcal(await (act === "connect" ? api().gcal_connect() : api().gcal_sync_now()));
+    } catch {
+      renderGcal({ ...(await api().gcal_status()), error: T.gcalFailed });
+    }
+  });
 }
 
 // --- detail panel ----------------------------------------------------------
@@ -378,6 +441,9 @@ function bindPopup() {
   window.addEventListener("blur", () => api().popup_blurred());
   document.addEventListener("keydown", e => { if (e.key === "Escape") api().hide_popup(); });
 }
+
+// Called from Python after a calendar sync changed tasks or today's events.
+window.reloadData = () => { if (S.data && S.view !== "settings") load(); };
 
 // Called from Python when a popup row is clicked.
 window.focusTask = async id => {

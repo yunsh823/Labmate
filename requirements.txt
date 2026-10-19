@@ -1,4 +1,6 @@
 pywebview>=6
 pystray>=0.19
 Pillow>=10.1
+google-api-python-client>=2.100
+google-auth-oauthlib>=1.2
 pytest>=8

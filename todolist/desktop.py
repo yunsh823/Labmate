@@ -83,6 +83,7 @@ class Desktop:
         self.popup_visible = False
         self.popup_hidden_at = 0.0
         self.popup_shown_at = 0.0
+        self._sync_wakeup = threading.Event()
 
         self.main = webview.create_window(
             "ToDoList", url=str(WEB_DIR / "index.html"), js_api=self.api,
@@ -112,10 +113,36 @@ class Desktop:
 
     def _on_started(self) -> None:
         _hide_from_taskbar(self.popup)
+        threading.Thread(target=self._sync_loop, daemon=True).start()
         # Keep the tray count right across midnight even if nothing is edited.
         while not self.quitting:
             self.refresh_icon()
             time.sleep(60)
+
+    def _sync_loop(self) -> None:
+        """Calendar sync at start, every 5 minutes, and shortly after local edits."""
+        while not self.quitting:
+            self.api._sync_calendar()
+            self.after_sync()
+            if self._sync_wakeup.wait(timeout=300):
+                self._sync_wakeup.clear()
+                time.sleep(2)  # let a burst of edits settle into one sync
+
+    def request_sync(self) -> None:
+        self._sync_wakeup.set()
+
+    def after_sync(self) -> None:
+        """Pull-side changes (calendar edits, today's events) need a re-render."""
+        self.refresh_icon()
+        for w in (self.main, self.popup):
+            try:
+                w.evaluate_js("window.reloadData && reloadData()")
+            except Exception:
+                pass
+
+    def pick_json_file(self) -> str | None:
+        paths = self.main.create_file_dialog(webview.FileDialog.OPEN, file_types=("JSON (*.json)",))
+        return paths[0] if paths else None
 
     def _on_main_closing(self):
         if self.quitting:

@@ -9,6 +9,7 @@ from dataclasses import asdict
 from datetime import date
 
 from .db import BUCKETS, VIEWS, Store, Task
+from .gcal import CalendarSync
 
 # Allowed values per setting; None means free text (validated separately).
 SETTINGS = {
@@ -32,6 +33,7 @@ class Api:
         self._shell = shell  # desktop.Desktop when running as the app; None in tests
         self._lock = threading.Lock()
         self._font_cache: list[str] | None = None
+        self._gcal = CalendarSync(store, self._lock)
 
     def _open_today(self) -> int:
         with self._lock:
@@ -40,6 +42,14 @@ class Api:
     def _changed(self) -> None:
         if self._shell:
             self._shell.refresh_icon()
+            self._shell.request_sync()
+
+    def _sync_calendar(self) -> None:
+        """One calendar sync pass; errors are kept for the Settings page, not raised."""
+        try:
+            self._gcal.sync()
+        except Exception:
+            pass
 
     def state(self, view: str, project: str | None = None) -> dict:
         """Everything one render needs, in a single round trip."""
@@ -52,6 +62,7 @@ class Api:
                 "counts": {v: self._store.count(v, project, today) for v in VIEWS},
                 "projects": self._store.projects(),
                 "settings": {k: self._store.get_setting(k, v) for k, v in DEFAULTS.items()},
+                "events": self._gcal.today_events if view == "today" else [],
             }
 
     def _setting(self, key: str) -> str:
@@ -67,8 +78,8 @@ class Api:
             raise ValueError(value)
         with self._lock:
             self._store.set_setting(key, value)
-        if key == "lang":
-            self._changed()  # tray tooltip follows the language
+        if key == "lang" and self._shell:
+            self._shell.refresh_icon()  # tray tooltip follows the language
 
     def fonts(self) -> list[str]:
         """Font families installed on this system."""
@@ -136,3 +147,33 @@ class Api:
     def popup_blurred(self) -> None:
         if self._shell:
             self._shell.popup_blurred()
+
+    # --- Google Calendar -------------------------------------------------------
+
+    def gcal_status(self) -> dict:
+        g = self._gcal
+        return {"has_client": g.has_client_file(), "connected": g.connected(), "account": g.account,
+                "last_sync": g.last_sync, "error": g.error}
+
+    def gcal_import_client(self) -> dict:
+        path = self._shell.pick_json_file() if self._shell else None
+        if path:
+            self._gcal.import_client_file(path)
+        return self.gcal_status()
+
+    def gcal_connect(self) -> dict:
+        self._gcal.connect()
+        self._sync_calendar()
+        if self._shell:
+            self._shell.after_sync()
+        return self.gcal_status()
+
+    def gcal_disconnect(self) -> dict:
+        self._gcal.disconnect()
+        return self.gcal_status()
+
+    def gcal_sync_now(self) -> dict:
+        self._sync_calendar()
+        if self._shell:
+            self._shell.after_sync()
+        return self.gcal_status()

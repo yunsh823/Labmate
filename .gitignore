@@ -1,6 +1,7 @@
 # Secrets — never commit
 apiKey.txt
 credentials*.json
+client_secret*.json
 token*.json
 *.key
 
