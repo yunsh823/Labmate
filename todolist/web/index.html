@@ -23,7 +23,9 @@
         <div class="head-top">
           <h1 id="title"></h1>
           <span class="head-date" id="subtitle"></span>
+          <button class="weather" id="weather" hidden></button>
         </div>
+        <div class="weather-panel" id="weather-panel" hidden></div>
         <div class="stats" id="stats"></div>
       </header>
       <form class="quick-add" id="quick-add" autocomplete="off">
@@ -72,6 +74,26 @@
             <div class="setting-desc" id="hotkey-desc"></div>
           </div>
           <kbd class="kbd" id="hotkey-key"></kbd>
+        </div>
+
+        <h2 class="settings-group" data-i18n="weather"></h2>
+        <div class="setting">
+          <div>
+            <div class="setting-label" data-i18n="kmaKey"></div>
+            <div class="setting-desc" data-i18n="kmaKeyDesc"></div>
+          </div>
+          <input class="text-input" id="set-kma-key" type="password" autocomplete="off">
+        </div>
+        <div class="setting">
+          <div>
+            <div class="setting-label" data-i18n="location"></div>
+            <div class="setting-desc" id="weather-desc"></div>
+          </div>
+          <div class="setting-actions">
+            <input class="text-input small" id="set-lat" data-i18n-ph="lat" inputmode="decimal">
+            <input class="text-input small" id="set-lon" data-i18n-ph="lon" inputmode="decimal">
+            <button class="btn primary" id="weather-save" data-i18n="save"></button>
+          </div>
         </div>
 
         <h2 class="settings-group" data-i18n="gcal"></h2>

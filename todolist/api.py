@@ -10,6 +10,7 @@ from datetime import date
 
 from .db import BUCKETS, VIEWS, Store, Task
 from .gcal import CalendarSync
+from .weather import Weather, latlon_to_grid
 
 # Allowed values per setting; None means free text (validated separately).
 SETTINGS = {
@@ -35,6 +36,7 @@ class Api:
         self._lock = threading.Lock()
         self._font_cache: list[str] | None = None
         self._gcal = CalendarSync(store, self._lock)
+        self._weather = Weather()
 
     def _open_today(self) -> int:
         with self._lock:
@@ -62,6 +64,7 @@ class Api:
 
     def state(self, view: str, project: str | None = None) -> dict:
         """Everything one render needs, in a single round trip."""
+        weather = self._weather.data if self._weather_config() else None  # takes the lock itself
         with self._lock:
             today = date.today()
             project = project or None
@@ -73,6 +76,7 @@ class Api:
                 "settings": {k: self._store.get_setting(k, v) for k, v in DEFAULTS.items()},
                 "events": self._gcal.today_events if view == "today" else [],
                 "gcal_reauth": self._gcal.needs_reauth,
+                "weather": weather,
             }
 
     def _setting(self, key: str) -> str:
@@ -157,6 +161,48 @@ class Api:
     def popup_blurred(self) -> None:
         if self._shell:
             self._shell.popup_blurred()
+
+    # --- weather (KMA API Hub) ----------------------------------------------------
+    # The key is stored like other settings but never sent back to the page.
+
+    def _weather_config(self) -> tuple[str, float, float] | None:
+        with self._lock:
+            key = self._store.get_setting("kma_key", "")
+            lat = self._store.get_setting("weather_lat", "")
+            lon = self._store.get_setting("weather_lon", "")
+        return (key, float(lat), float(lon)) if key and lat and lon else None
+
+    def _refresh_weather(self) -> None:
+        config = self._weather_config()
+        if config:
+            self._weather.refresh(*config)
+
+    def weather_settings(self) -> dict:
+        with self._lock:
+            lat = self._store.get_setting("weather_lat", "")
+            lon = self._store.get_setting("weather_lon", "")
+            has_key = bool(self._store.get_setting("kma_key", ""))
+        return {
+            "has_key": has_key, "lat": lat, "lon": lon,
+            "grid": latlon_to_grid(float(lat), float(lon)) if lat and lon else None,
+            "updated": (self._weather.data or {}).get("updated"), "error": self._weather.error,
+        }
+
+    def set_weather(self, key: str, lat: str, lon: str) -> dict:
+        """Save key (blank keeps the current one) and location, then refresh right away."""
+        key, lat, lon = key.strip(), float(lat), float(lon)
+        if key and (len(key) > 200 or any(c.isspace() for c in key)):
+            raise ValueError("bad key")
+        if not (32 <= lat <= 40 and 123 <= lon <= 133):  # KMA grid covers the Korean peninsula
+            raise ValueError("location outside KMA forecast area")
+        with self._lock:
+            if key:
+                self._store.set_setting("kma_key", key)
+            self._store.set_setting("weather_lat", f"{lat:.4f}")
+            self._store.set_setting("weather_lon", f"{lon:.4f}")
+        self._weather._daily = None  # location may have changed
+        self._refresh_weather()
+        return self.weather_settings()
 
     # --- Google Calendar -------------------------------------------------------
 

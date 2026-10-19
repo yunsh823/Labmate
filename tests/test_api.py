@@ -67,6 +67,18 @@ def test_fonts_lists_system_families(api):
     assert fonts and not any(f.startswith("@") for f in fonts)
 
 
+def test_weather_settings_hide_key_and_validate(api, monkeypatch):
+    monkeypatch.setattr(api._weather, "refresh", lambda *a, **k: None)  # no network in tests
+    st = api.set_weather("abc123", "37.5665", "126.9780")
+    assert st["has_key"] and st["grid"] == (60, 127) and "abc123" not in str(st)
+    assert "abc123" not in str(api.state("today"))
+    api.set_weather("", "33.4996", "126.5312")  # blank key keeps the saved one
+    assert api._weather_config()[0] == "abc123"
+    for bad in [("abc", "51.5", "-0.1"), ("a b", "37.5", "127.0")]:
+        with pytest.raises(ValueError):
+            api.set_weather(*bad)
+
+
 def test_internal_attributes_hidden_from_js(api):
     public = [n for n in vars(api) if not n.startswith("_")]
     assert public == []

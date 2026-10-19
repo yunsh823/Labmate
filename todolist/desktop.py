@@ -123,6 +123,7 @@ class Desktop:
     def _on_started(self) -> None:
         _hide_from_taskbar(self.popup)
         threading.Thread(target=self._sync_loop, daemon=True).start()
+        threading.Thread(target=self._weather_loop, daemon=True).start()
         if sys.platform == "win32":
             threading.Thread(target=self._hotkey_loop, daemon=True).start()
         # Tray count (also across midnight) and reminders.
@@ -170,6 +171,12 @@ class Desktop:
             if self._sync_wakeup.wait(timeout=300):
                 self._sync_wakeup.clear()
                 time.sleep(2)  # let a burst of edits settle into one sync
+
+    def _weather_loop(self) -> None:
+        while not self.quitting:
+            self.api._refresh_weather()
+            self.after_sync()
+            time.sleep(1800)  # forecasts change a few times a day; 30 min is plenty
 
     def request_sync(self) -> None:
         self._sync_wakeup.set()

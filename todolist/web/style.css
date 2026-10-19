@@ -121,6 +121,27 @@ ul { list-style: none; margin: 0; padding: 0; }
 .head-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; }
 .head h1 { font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
 .head-date { font-size: 16px; color: var(--text-2); }
+
+/* weather chip + hourly panel */
+.weather {
+  margin-left: auto; align-self: center; display: inline-flex; align-items: center; gap: 6px;
+  border: 0; background: var(--field); border-radius: 999px; padding: 4px 12px;
+  font-size: 13px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+}
+.weather:hover { background: var(--selected); }
+.weather .icon { width: 18px; height: 18px; color: var(--text); }
+.weather .now { font-size: 15px; font-weight: 700; color: var(--text); }
+.weather .rain { display: inline-flex; align-items: center; gap: 2px; color: var(--accent); font-weight: 600; }
+.weather .rain .icon { width: 15px; height: 15px; color: var(--accent); }
+.weather-panel { display: flex; gap: 4px; overflow-x: auto; margin-top: 10px; padding-bottom: 4px; }
+.hour {
+  flex: none; width: 52px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 0; border-radius: var(--radius); background: var(--field); font-size: 12px; color: var(--text-2);
+}
+.hour .icon { width: 20px; height: 20px; color: var(--text); }
+.hour b { font-size: 14px; color: var(--text); }
+.hour .pop { color: var(--accent); }
+.hour .pop.low { color: var(--text-3); }
 .stats { display: flex; gap: 18px; margin-top: 8px; }
 .stat { display: flex; align-items: baseline; gap: 6px; }
 .stat b { font-size: 28px; font-weight: 700; line-height: 1; color: var(--accent); }
@@ -229,6 +250,12 @@ ul { list-style: none; margin: 0; padding: 0; }
 .setting-desc { font-size: 13px; color: var(--text-2); margin-top: 4px; }
 .setting-error { color: var(--danger); margin-top: 4px; }
 .setting-actions { display: flex; gap: 8px; flex: none; }
+.text-input {
+  border: 1px solid transparent; background: var(--field); border-radius: var(--radius);
+  padding: 6px 10px; outline: 0; width: 240px;
+}
+.text-input:focus { border-color: var(--accent); }
+.text-input.small { width: 92px; }
 .kbd {
   font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 6px;
   border: 1px solid var(--line); background: var(--field); white-space: nowrap;

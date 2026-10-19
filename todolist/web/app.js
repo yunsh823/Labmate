@@ -14,6 +14,14 @@ const ICONS = {
   note: '<path d="M5 6h14M5 12h14M5 18h8"/>',
   restore: '<path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/>',
   panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+  wsun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  wmoon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  wpartly: '<path d="M8 2.5V4M3.4 4.4l1 1M2 9h1.5"/><path d="M5.2 11.6A4 4 0 1 1 12.4 6.8"/><path d="M9 21h8a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 8 15a3 3 0 0 0 1 6z"/>',
+  wcloud: '<path d="M7 19h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 10.1 4.5 4.5 0 0 0 7 19z"/>',
+  wrain: '<path d="M7 15h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 6.1 4.5 4.5 0 0 0 7 15z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/>',
+  wsnow: '<path d="M7 15h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 6.1 4.5 4.5 0 0 0 7 15z"/><path d="M8 18.5h.01M12 18.5h.01M16 18.5h.01M10 21.5h.01M14 21.5h.01"/>',
+  wsleet: '<path d="M7 15h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 6.1 4.5 4.5 0 0 0 7 15z"/><path d="M8 18l-1 3M12 19h.01M16 18l-1 3"/>',
+  umbrella: '<path d="M3 12a9 9 0 0 1 18 0z"/><path d="M12 12v6a2 2 0 0 0 4 0"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
 };
 
@@ -44,6 +52,11 @@ const STRINGS = {
     general: "일반", theme: "테마", themeSystem: "시스템", themeLight: "라이트", themeDark: "다크",
     language: "언어", font: "글꼴", fontDefault: "기본 (Pretendard)",
     events: "일정", allDay: "종일",
+    weather: "날씨", kmaKey: "기상청 API 키", kmaKeyDesc: "기상청 API 허브에서 발급한 인증키",
+    kmaKeySaved: "저장됨 · 바꾸려면 새 키 입력", location: "위치", lat: "위도", lon: "경도", save: "저장",
+    weatherGrid: (nx, ny) => `기상청 격자 ${nx}, ${ny}`, weatherUpdated: t => `업데이트 ${t}`,
+    weatherNone: "지도 앱에서 위치를 우클릭하면 좌표를 복사할 수 있어요", weatherBad: "키나 위도·경도를 확인하세요",
+    weatherError: "날씨 오류", hourly: "시간별 예보",
     notifications: "알림", remind: "일정 시작 전 알림", remindOff: "끄기", minutes: n => `${n}분`,
     remindDesc: "시간이 정해진 오늘 할 일과 캘린더 일정",
     hotkey: "빠른 입력 단축키", hotkeyDesc: "어디서든 눌러 오늘 할 일을 바로 추가",
@@ -79,6 +92,11 @@ const STRINGS = {
     general: "General", theme: "Theme", themeSystem: "System", themeLight: "Light", themeDark: "Dark",
     language: "Language", font: "Font", fontDefault: "Default (Pretendard)",
     events: "Events", allDay: "All day",
+    weather: "Weather", kmaKey: "KMA API key", kmaKeyDesc: "Auth key issued by the KMA API Hub",
+    kmaKeySaved: "Saved · enter a new key to replace it", location: "Location", lat: "Lat", lon: "Lon", save: "Save",
+    weatherGrid: (nx, ny) => `KMA grid ${nx}, ${ny}`, weatherUpdated: t => `Updated ${t}`,
+    weatherNone: "Right-click a place in a map app to copy its coordinates", weatherBad: "Check the key and coordinates",
+    weatherError: "Weather error", hourly: "Hourly forecast",
     notifications: "Notifications", remind: "Remind before start", remindOff: "Off", minutes: n => `${n} min`,
     remindDesc: "Timed tasks and calendar events today",
     hotkey: "Quick add shortcut", hotkeyDesc: "Press anywhere to add a task for today",
@@ -206,6 +224,26 @@ function renderNav() {
   $("settings-btn").classList.toggle("on", S.view === "settings");
 }
 
+function weatherIcon(w) {
+  const name = { rain: "wrain", shower: "wrain", sleet: "wsleet", snow: "wsnow" }[w.pty]
+    || (w.sky === "cloudy" ? "wcloud" : w.sky === "partly" ? "wpartly" : w.night ? "wmoon" : "wsun");
+  return icon(name);
+}
+
+function renderWeather() {
+  const w = S.data.weather;
+  const show = !!w && (POPUP || S.view === "today");
+  $("weather").hidden = !show;
+  if (!show) { $("weather-panel").hidden = true; return; }
+  const range = w.tmin != null && w.tmax != null ? `<span>${w.tmin}° / ${w.tmax}°</span>` : "";
+  const rain = w.pop_max >= 60 ? `<span class="rain">${icon("umbrella")}${w.pop_max}%</span>` : "";
+  $("weather").innerHTML = `${weatherIcon(w)}<span class="now">${w.temp ?? "-"}°</span>${range}${rain}`;
+  $("weather").title = T.hourly;
+  $("weather-panel").innerHTML = w.hourly.map(h => `
+    <div class="hour"><span>${h.time.slice(0, 2)}${T === STRINGS.ko ? "시" : ""}</span>${weatherIcon(h)}<b>${h.temp}°</b>
+      <span class="pop ${h.pop < 30 ? "low" : ""}">${h.pop}%</span></div>`).join("");
+}
+
 function stat(n, label, cls = "") {
   return `<div class="stat ${cls}"><b>${n}</b><span>${label}</span></div>`;
 }
@@ -228,6 +266,7 @@ function renderHeader() {
     date = `${T.day(mon)} – ${T.day(sun, sun.getMonth() !== mon.getMonth())}`;
   }
   $("subtitle").textContent = date;
+  renderWeather();
 
   const open = tasks.filter(x => !x.done).length;
   let stats = "";
@@ -336,11 +375,24 @@ async function renderSettings() {
   $("set-font").value = font;
   $("set-remind").innerHTML = ["off", "5", "10", "15", "30"].map(v =>
     `<button data-value="${v}" aria-pressed="${v === S.data.settings.remind}">${v === "off" ? T.remindOff : T.minutes(v)}</button>`).join("");
+  renderWeatherSettings(await api().weather_settings());
   const info = await api().app_info();
   $("hotkey-desc").textContent = info.hotkey_ok ? T.hotkeyDesc : T.hotkeyBusy;
   $("hotkey-desc").classList.toggle("setting-error", !info.hotkey_ok);
   $("hotkey-key").textContent = info.hotkey;
   renderGcal(await api().gcal_status());
+}
+
+function renderWeatherSettings(st, failed = false) {
+  $("set-kma-key").placeholder = st.has_key ? T.kmaKeySaved : "";
+  $("set-kma-key").value = "";
+  $("set-lat").value = st.lat;
+  $("set-lon").value = st.lon;
+  let desc = st.grid ? T.weatherGrid(...st.grid) : T.weatherNone;
+  if (st.updated && !st.error) desc += ` · ${T.weatherUpdated(st.updated)}`;
+  if (failed) desc += `<div class="setting-error">${T.weatherBad}</div>`;
+  else if (st.error) desc += `<div class="setting-error">${T.weatherError}: ${esc(st.error)}</div>`;
+  $("weather-desc").innerHTML = desc;
 }
 
 function renderGcal(st, busy = false) {
@@ -375,6 +427,15 @@ function bindSettings() {
     if (b) setSetting("lang", b.dataset.value).then(render);
   });
   $("set-font").addEventListener("change", e => setSetting("font", e.target.value));
+  $("weather-save").addEventListener("click", async () => {
+    $("weather-save").disabled = true;
+    try {
+      renderWeatherSettings(await api().set_weather($("set-kma-key").value, $("set-lat").value, $("set-lon").value));
+    } catch {
+      renderWeatherSettings(await api().weather_settings(), true);
+    }
+    $("weather-save").disabled = false;
+  });
   $("set-remind").addEventListener("click", e => {
     const b = e.target.closest("[data-value]");
     if (b) setSetting("remind", b.dataset.value).then(renderSettings);
@@ -485,6 +546,7 @@ window.focusTask = async id => {
 };
 
 function bindShared() {
+  $("weather").addEventListener("click", () => { $("weather-panel").hidden = !$("weather-panel").hidden; });
   $("quick-add").addEventListener("submit", async e => {
     e.preventDefault();
     const title = $("quick-input").value.trim();
