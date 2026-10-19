@@ -13,29 +13,76 @@ const ICONS = {
   repeat: '<path d="M4 12V9a3 3 0 0 1 3-3h13m-3-3 3 3-3 3M20 12v3a3 3 0 0 1-3 3H4m3 3-3-3 3-3"/>',
   note: '<path d="M5 6h14M5 12h14M5 18h8"/>',
   restore: '<path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/>',
+  panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
 };
 
 function icon(name) {
   return `<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg></span>`;
 }
 
+// --- strings ---------------------------------------------------------------
+
+const STRINGS = {
+  ko: {
+    today: "오늘", week: "이번 주", later: "나중에", someday: "아이디어", done: "완료", trash: "휴지통", settings: "설정",
+    projects: "프로젝트", noProjects: "프로젝트 없음", toggleSidebar: "사이드바 접기/펼치기",
+    overdue: "지난 마감", doneToday: "오늘 완료", open: "남은 할 일", items: "항목", tasks: "할 일", ideas: "아이디어",
+    ph: { today: "오늘 할 일 추가", week: "이번 주 할 일 추가", later: "나중에 할 일 추가", someday: "아이디어 추가" },
+    empty: {
+      today: "오늘 할 일을 추가하세요", week: "이번 주에 할 일을 추가하세요", later: "나중에 할 일을 추가하세요",
+      someday: "아이디어를 적어 두세요", done: "완료한 할 일이 없어요", trash: "휴지통이 비어 있어요",
+    },
+    allDone: "오늘 할 일을 모두 끝냈어요",
+    hint: "클릭: 편집 · Delete: 휴지통 · Esc: 닫기", hintTrash: "휴지통 항목은 30일 후 자동 삭제됩니다",
+    addTask: "할 일 추가", close: "닫기", title: "제목", bucket: "분류", project: "프로젝트", none: "없음",
+    due: "마감", dueDate: "마감일", time: "시간", repeat: "반복", notes: "메모", moveToTrash: "휴지통으로",
+    daily: "매일", weekly: "매주", monthly: "매월", restore: "복원", purge: "영구 삭제", complete: "완료",
+    confirmPurge: "이 항목을 영구 삭제할까요? 되돌릴 수 없습니다.",
+    confirmClearDue: "마감일이 오늘이거나 지나서 '오늘'에 계속 표시됩니다.\n마감일을 지우고 이동할까요?",
+    openMain: "전체 창 열기",
+    general: "일반", theme: "테마", themeSystem: "시스템", themeLight: "라이트", themeDark: "다크",
+    language: "언어", font: "글꼴", fontDefault: "기본",
+    weekdays: "일월화수목금토",
+    day: (d, withMonth = true) => `${withMonth ? `${d.getMonth() + 1}월 ` : ""}${d.getDate()}일 (${"일월화수목금토"[d.getDay()]})`,
+    chipDate: d => `${d.getMonth() + 1}/${d.getDate()}(${"일월화수목금토"[d.getDay()]})`,
+  },
+  en: {
+    today: "Today", week: "This week", later: "Later", someday: "Ideas", done: "Done", trash: "Trash", settings: "Settings",
+    projects: "Projects", noProjects: "No projects", toggleSidebar: "Collapse/expand sidebar",
+    overdue: "Overdue", doneToday: "Done today", open: "to do", items: "items", tasks: "tasks", ideas: "ideas",
+    ph: { today: "Add a task for today", week: "Add a task for this week", later: "Add a task for later", someday: "Add an idea" },
+    empty: {
+      today: "Add a task for today", week: "Add a task for this week", later: "Add a task for later",
+      someday: "Write down an idea", done: "No completed tasks", trash: "Trash is empty",
+    },
+    allDone: "All done for today",
+    hint: "Click: edit · Delete: trash · Esc: close", hintTrash: "Items in trash are deleted after 30 days",
+    addTask: "Add task", close: "Close", title: "Title", bucket: "List", project: "Project", none: "None",
+    due: "Due", dueDate: "Due date", time: "Time", repeat: "Repeat", notes: "Notes", moveToTrash: "Move to trash",
+    daily: "Daily", weekly: "Weekly", monthly: "Monthly", restore: "Restore", purge: "Delete forever", complete: "Complete",
+    confirmPurge: "Delete this item forever? This can't be undone.",
+    confirmClearDue: "This task is due today or earlier, so it stays in Today.\nClear the due date and move it?",
+    openMain: "Open full window",
+    general: "General", theme: "Theme", themeSystem: "System", themeLight: "Light", themeDark: "Dark",
+    language: "Language", font: "Font", fontDefault: "Default",
+    day: (d, withMonth = true) => d.toLocaleDateString("en-US", withMonth
+      ? { weekday: "short", month: "short", day: "numeric" } : { weekday: "short", day: "numeric" }),
+    chipDate: d => d.toLocaleDateString("en-US", { weekday: "short", month: "numeric", day: "numeric" }),
+  },
+};
+let T = STRINGS.ko;
+
 const VIEWS = [
-  { id: "today", label: "오늘", icon: "sun" },
-  { id: "week", label: "이번 주", icon: "week" },
-  { id: "later", label: "나중에", icon: "clock" },
-  { id: "someday", label: "아이디어", icon: "bulb" },
-  null,
-  { id: "done", label: "완료", icon: "done" },
-  { id: "trash", label: "휴지통", icon: "trash" },
+  { id: "today", icon: "sun" }, { id: "week", icon: "week" }, { id: "later", icon: "clock" },
+  { id: "someday", icon: "bulb" }, null, { id: "done", icon: "done" }, { id: "trash", icon: "trash" },
 ];
 const BUCKETS = ["today", "week", "later", "someday"];
-const LABEL = Object.fromEntries(VIEWS.filter(Boolean).map(v => [v.id, v.label]));
-const RECURRENCE = { daily: "매일", weekly: "매주", monthly: "매월" };
-const WEEKDAYS = "일월화수목금토";
+const DEFAULT_FONT = '"Segoe UI Variable Text", "Segoe UI", "Malgun Gothic", -apple-system, "Apple SD Gothic Neo", sans-serif';
 
 // The tray popup (popup.html) reuses this file: Today only, no sidebar or detail panel.
 const POPUP = document.body.classList.contains("popup");
-const S = { view: "today", project: "", selected: null, data: null };
+const S = { view: "today", project: "", selected: null, data: null, fonts: null };
 const $ = id => document.getElementById(id);
 const api = () => window.pywebview.api;
 
@@ -67,44 +114,70 @@ function hue(name) {
   return h >= 10 && h <= 50 ? h + 140 : h;  // skip the orange/clay band
 }
 
+// --- settings applied to the page ----------------------------------------
+
+function applySettings() {
+  const { theme, lang, font, sidebar } = S.data.settings;
+  if (theme === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.dataset.theme = theme;
+  document.documentElement.style.setProperty("--font", font ? `"${font}", ${DEFAULT_FONT}` : DEFAULT_FONT);
+  if (T !== STRINGS[lang]) {
+    T = STRINGS[lang];
+    document.documentElement.lang = lang;
+    applyStaticStrings();
+  }
+  if (!POPUP) $("app").classList.toggle("collapsed", sidebar === "collapsed");
+}
+
+function applyStaticStrings() {
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = T[el.dataset.i18n]; });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = T[el.dataset.i18nPh]; });
+  document.querySelectorAll("[data-i18n-aria]").forEach(el => el.setAttribute("aria-label", T[el.dataset.i18nAria]));
+  document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = T[el.dataset.i18nTitle]; });
+}
+
+async function setSetting(key, value) {
+  S.data.settings[key] = value;
+  applySettings();
+  await api().set_setting(key, value);
+}
+
 // --- rendering -------------------------------------------------------------
 
 async function load() {
-  S.data = await api().state(S.view, S.project);
+  // The settings page still needs counts for the sidebar; fetch Today behind it.
+  S.data = await api().state(S.view === "settings" ? "today" : S.view, S.project);
   if (S.selected && !S.data.tasks.some(t => t.id === S.selected)) closeDetail();
   render();
 }
 
-function applyTheme(theme) {
-  if (theme === "system") document.documentElement.removeAttribute("data-theme");
-  else document.documentElement.dataset.theme = theme;
-  document.querySelectorAll("[data-theme-set]").forEach(b => b.setAttribute("aria-checked", b.dataset.themeSet === theme));
-}
-
 function render() {
-  applyTheme(S.data.theme);
+  applySettings();
   if (!POPUP) renderNav();
+  const settings = S.view === "settings";
+  if (!POPUP) {
+    for (const id of ["quick-add", "list", "hint"]) $(id).hidden = settings;
+    $("settings").hidden = !settings;
+  }
   renderHeader();
+  if (settings) return renderSettings();
   renderList();
 }
 
 function renderNav() {
   const { counts, projects } = S.data;
   $("nav").innerHTML = VIEWS.map(v => v === null ? '<li class="sep"></li>' : `
-    <li data-view="${v.id}" class="${v.id === S.view ? "on" : ""}">
-      ${icon(v.icon)}${v.label}
+    <li data-view="${v.id}" class="${v.id === S.view ? "on" : ""}" title="${T[v.id]}">
+      ${icon(v.icon)}<span class="label">${T[v.id]}</span>
       ${counts[v.id] && v.id !== "trash" ? `<span class="count">${counts[v.id]}</span>` : ""}
     </li>`).join("");
   $("projects").innerHTML = projects.length
     ? projects.map(p => `
-      <li data-project="${esc(p)}" class="${p === S.project ? "on" : ""}">
-        <span class="dot" style="--h:${hue(p)}"></span>${esc(p)}
+      <li data-project="${esc(p)}" class="${p === S.project ? "on" : ""}" title="${esc(p)}">
+        <span class="dot" style="--h:${hue(p)}"></span><span class="label">${esc(p)}</span>
       </li>`).join("")
-    : '<li class="empty-projects">할 일 편집에서 프로젝트를 지정하면 여기에 모여요</li>';
-}
-
-function fmtDay(d, withMonth = true) {
-  return `${withMonth ? `${d.getMonth() + 1}월 ` : ""}${d.getDate()}일 (${WEEKDAYS[d.getDay()]})`;
+    : `<li class="empty-projects"><span class="label">${T.noProjects}</span></li>`;
+  $("settings-btn").classList.toggle("on", S.view === "settings");
 }
 
 function stat(n, label, cls = "") {
@@ -114,41 +187,42 @@ function stat(n, label, cls = "") {
 function renderHeader() {
   const { today, tasks } = S.data;
   const t = parseDate(today);
-  $("title").textContent = LABEL[S.view] + (S.project ? ` · ${S.project}` : "");
+  const settings = S.view === "settings";
+  $("title").textContent = T[S.view] + (S.project && !settings ? ` · ${S.project}` : "");
 
   let date = "";
   if (S.view === "today") {
-    date = fmtDay(t);
+    date = T.day(t);
   } else if (S.view === "week") {
     // Monday-to-Sunday week containing today.
     const mon = new Date(t);
     mon.setDate(t.getDate() - ((t.getDay() + 6) % 7));
     const sun = new Date(mon);
     sun.setDate(mon.getDate() + 6);
-    date = `${fmtDay(mon)} – ${fmtDay(sun, sun.getMonth() !== mon.getMonth())}`;
+    date = `${T.day(mon)} – ${T.day(sun, sun.getMonth() !== mon.getMonth())}`;
   }
   $("subtitle").textContent = date;
 
   const open = tasks.filter(x => !x.done).length;
-  if (POPUP) {
-    $("stats").innerHTML = stat(open, "남은 할 일");
+  let stats = "";
+  if (settings) {
+    stats = "";
   } else if (S.view === "today") {
     const overdue = tasks.filter(x => !x.done && x.due_date && daysUntil(x.due_date) < 0).length;
-    $("stats").innerHTML = stat(open, "남은 할 일")
-      + (overdue ? stat(overdue, "지난 마감", "danger") : "")
-      + stat(tasks.length - open, "완료", "muted");
+    stats = stat(open, T.open) + (overdue ? stat(overdue, T.overdue, "danger") : "")
+      + (POPUP ? "" : stat(tasks.length - open, T.done, "muted"));
   } else if (S.view === "trash") {
-    $("stats").innerHTML = stat(tasks.length, "항목", "muted");
+    stats = stat(tasks.length, T.items, "muted");
   } else {
-    $("stats").innerHTML = stat(tasks.length, { done: "완료", someday: "아이디어" }[S.view] || "할 일");
+    stats = stat(tasks.length, { done: T.done, someday: T.ideas }[S.view] || T.tasks);
   }
-  if (POPUP) return;
+  $("stats").innerHTML = stats;
+  $("stats").hidden = !stats;
+
   const canAdd = BUCKETS.includes(S.view);
   $("quick-add").hidden = !canAdd;
-  if (canAdd) $("quick-input").placeholder = S.view === "someday" ? "떠오른 아이디어 적기" : `'${LABEL[S.view]}'에 할 일 추가`;
-  $("hint").textContent = S.view === "trash"
-    ? "30일이 지나면 자동으로 영구 삭제됩니다."
-    : "클릭: 상세 편집 · Delete: 휴지통으로 · Esc: 닫기";
+  if (canAdd) $("quick-input").placeholder = T.ph[S.view];
+  if (!POPUP) $("hint").textContent = S.view === "trash" ? T.hintTrash : T.hint;
 }
 
 function renderList() {
@@ -158,17 +232,12 @@ function renderList() {
     const overdue = tasks.filter(t => !t.done && t.due_date && daysUntil(t.due_date) < 0);
     const open = tasks.filter(t => !t.done && !overdue.includes(t));
     const done = tasks.filter(t => t.done);
-    html += section("지난 마감", overdue, "overdue");
-    html += overdue.length || done.length ? section("오늘", open) : open.map(taskRow).join("");
-    html += section("오늘 완료", done);
-    if (!open.length && !overdue.length) {
-      html = empty(done.length ? "오늘 할 일을 모두 끝냈어요" : "오늘 할 일을 추가해 보세요",
-                   done.length ? "수고했어요." : "위 입력칸에 쓰고 Enter를 누르면 됩니다.") + html;
-    }
+    html += section(T.overdue, overdue, "overdue");
+    html += overdue.length || done.length ? section(T.today, open) : open.map(taskRow).join("");
+    html += section(T.doneToday, done);
+    if (!open.length && !overdue.length) html = empty(done.length ? T.allDone : T.empty.today) + html;
   } else {
-    html = tasks.map(taskRow).join("") || empty(
-      S.view === "trash" ? "휴지통이 비어 있어요" : S.view === "done" ? "완료한 할 일이 여기에 모여요"
-        : S.view === "someday" ? "떠오른 아이디어를 적어 두세요" : `'${LABEL[S.view]}'에 둘 할 일을 추가해 보세요`, "");
+    html = tasks.map(taskRow).join("") || empty(T.empty[S.view]);
   }
   $("list").innerHTML = html;
 }
@@ -178,32 +247,31 @@ function section(title, tasks, cls = "") {
   return `<div class="section ${cls}">${title}<span class="n">${tasks.length}</span></div>` + tasks.map(taskRow).join("");
 }
 
-function empty(big, small) {
-  return `<div class="empty"><div class="big">${big}</div>${small}</div>`;
+function empty(text) {
+  return `<div class="empty">${text}</div>`;
 }
 
 function taskRow(t) {
   const meta = [];
   if (t.due_date && !t.done) {
     const n = daysUntil(t.due_date);
-    const d = parseDate(t.due_date);
-    const date = `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAYS[d.getDay()]})`;
+    const date = T.chipDate(parseDate(t.due_date));
     if (n < 0) meta.push(`<span class="chip danger">D+${-n} · ${date}</span>`);
     else if (n === 0) meta.push(`<span class="chip today">D-day</span>`);
     else meta.push(`<span class="chip">D-${n} · ${date}</span>`);
   }
   if (t.due_time) meta.push(`<span class="info time">${icon("clock")}${t.due_time}</span>`);
   if (t.project) meta.push(`<span class="chip project" style="--h:${hue(t.project)}">${esc(t.project)}</span>`);
-  if (t.recurrence) meta.push(`<span class="info">${icon("repeat")}${RECURRENCE[t.recurrence]}</span>`);
-  if (t.notes) meta.push(`<span class="info" title="메모">${icon("note")}</span>`);
-  if (S.view === "today" && t.bucket !== "today" && !t.done) meta.push(`<span class="info">${LABEL[t.bucket]}</span>`);
+  if (t.recurrence) meta.push(`<span class="info">${icon("repeat")}${T[t.recurrence]}</span>`);
+  if (t.notes) meta.push(`<span class="info" title="${T.notes}">${icon("note")}</span>`);
+  if (S.view === "today" && t.bucket !== "today" && !t.done) meta.push(`<span class="info">${T[t.bucket]}</span>`);
 
   const trash = S.view === "trash";
-  const lead = trash ? "" : `<div class="check" data-check role="checkbox" aria-checked="${t.done}" aria-label="완료">${icon("check")}</div>`;
+  const lead = trash ? "" : `<div class="check" data-check role="checkbox" aria-checked="${t.done}" aria-label="${T.complete}">${icon("check")}</div>`;
   const tail = trash
     ? `<div class="row-actions">
-         <button class="ghost icon-btn" data-restore title="복원" aria-label="복원">${icon("restore")}</button>
-         <button class="ghost icon-btn danger" data-purge title="영구 삭제" aria-label="영구 삭제">${icon("trash")}</button>
+         <button class="ghost icon-btn" data-restore title="${T.restore}" aria-label="${T.restore}">${icon("restore")}</button>
+         <button class="ghost icon-btn danger" data-purge title="${T.purge}" aria-label="${T.purge}">${icon("trash")}</button>
        </div>`
     : "";
   return `
@@ -212,6 +280,30 @@ function taskRow(t) {
       <div class="body"><span class="t">${esc(t.title)}</span>${meta.join("")}</div>
       ${tail}
     </div>`;
+}
+
+// --- settings page ---------------------------------------------------------
+
+async function renderSettings() {
+  const { theme, lang, font } = S.data.settings;
+  $("set-theme").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.value === theme));
+  $("set-lang").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.value === lang));
+  if (!S.fonts) S.fonts = await api().fonts();
+  $("set-font").innerHTML = `<option value="">${T.fontDefault}</option>`
+    + S.fonts.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("");
+  $("set-font").value = font;
+}
+
+function bindSettings() {
+  $("set-theme").addEventListener("click", e => {
+    const b = e.target.closest("[data-value]");
+    if (b) setSetting("theme", b.dataset.value).then(renderSettings);
+  });
+  $("set-lang").addEventListener("click", e => {
+    const b = e.target.closest("[data-value]");
+    if (b) setSetting("lang", b.dataset.value).then(render);
+  });
+  $("set-font").addEventListener("change", e => setSetting("font", e.target.value));
 }
 
 // --- detail panel ----------------------------------------------------------
@@ -235,7 +327,7 @@ function openDetail(id) {
 
 function closeDetail() {
   S.selected = null;
-  $("detail").hidden = true;
+  if (!POPUP) $("detail").hidden = true;
 }
 
 async function save(fields) {
@@ -256,8 +348,7 @@ function bindDetail() {
     const t = S.data.tasks.find(x => x.id === S.selected);
     const fields = { bucket: e.target.value };
     // A due date of today or earlier keeps the task in Today regardless of bucket.
-    if (e.target.value !== "today" && t.due_date && daysUntil(t.due_date) <= 0 &&
-        confirm("마감일이 오늘이거나 지나서 '오늘'에 계속 표시됩니다.\n마감일을 지우고 이동할까요?")) {
+    if (e.target.value !== "today" && t.due_date && daysUntil(t.due_date) <= 0 && confirm(T.confirmClearDue)) {
       fields.due_date = "";
     }
     save(fields);
@@ -283,8 +374,8 @@ function bindDetail() {
 
 function bindPopup() {
   $("open-main").onclick = () => api().show_main(null);
-  // Behave like a flyout: hide when focus leaves, refresh when shown.
-  window.addEventListener("blur", () => api().hide_popup());
+  // Behave like a flyout: hide when focus leaves.
+  window.addEventListener("blur", () => api().popup_blurred());
   document.addEventListener("keydown", e => { if (e.key === "Escape") api().hide_popup(); });
 }
 
@@ -319,13 +410,13 @@ function bindShared() {
     }
     if (e.target.closest("[data-restore]")) { await api().restore(id); return load(); }
     if (e.target.closest("[data-purge]")) {
-      if (confirm("이 항목을 영구 삭제할까요? 되돌릴 수 없습니다.")) { await api().purge(id); await load(); }
+      if (confirm(T.confirmPurge)) { await api().purge(id); await load(); }
       return;
     }
     if (POPUP) return api().show_main(id);
     openDetail(id);
   });
-  // Other windows may have changed data; refresh whenever this one gets focus.
+  // Other windows may have changed data or settings; refresh whenever this one gets focus.
   window.addEventListener("focus", () => { if (S.data) load(); });
   // Re-evaluate Today/D-day when the date rolls over while the app is open.
   setInterval(() => { if (S.data && localToday() !== S.data.today) load(); }, 60000);
@@ -334,20 +425,15 @@ function bindShared() {
 function bind() {
   bindShared();
   if (POPUP) return bindPopup();
-  $("nav").addEventListener("click", e => {
+  document.querySelector(".sidebar").addEventListener("click", e => {
     const li = e.target.closest("[data-view]");
     if (!li) return;
     S.view = li.dataset.view;
     closeDetail();
     load();
   });
-  $("theme").addEventListener("click", async e => {
-    const b = e.target.closest("[data-theme-set]");
-    if (!b) return;
-    S.data.theme = b.dataset.themeSet;
-    applyTheme(S.data.theme);
-    await api().set_theme(S.data.theme);
-  });
+  $("side-toggle").onclick = () =>
+    setSetting("sidebar", S.data.settings.sidebar === "collapsed" ? "expanded" : "collapsed");
   $("projects").addEventListener("click", e => {
     const li = e.target.closest("[data-project]");
     if (!li) return;
@@ -365,9 +451,11 @@ function bind() {
     }
   });
   bindDetail();
+  bindSettings();
 }
 
 document.querySelectorAll("[data-icon]").forEach(el => { el.outerHTML = icon(el.dataset.icon); });
+applyStaticStrings();
 bind();
 if (window.pywebview?.api?.state) load();
 else window.addEventListener("pywebviewready", load);

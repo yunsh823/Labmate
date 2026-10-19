@@ -47,12 +47,23 @@ def test_project_filter_passthrough(api):
     assert len(api.state("today", "")["tasks"]) == 2
 
 
-def test_theme_setting_persists(api, tmp_path):
-    assert api.state("today")["theme"] == "system"
-    api.set_theme("dark")
-    assert Api(Store(tmp_path / "test.db")).state("today")["theme"] == "dark"
-    with pytest.raises(ValueError):
-        api.set_theme("blue")
+def test_settings_persist_and_validate(api, tmp_path):
+    assert api.state("today")["settings"] == {"theme": "system", "lang": "ko", "sidebar": "expanded", "font": ""}
+    api.set_setting("theme", "dark")
+    api.set_setting("lang", "en")
+    api.set_setting("font", "Malgun Gothic")
+    reopened = Api(Store(tmp_path / "test.db")).state("today")["settings"]
+    assert reopened["theme"] == "dark" and reopened["lang"] == "en" and reopened["font"] == "Malgun Gothic"
+    for key, bad in [("theme", "blue"), ("lang", "jp"), ("font", 'x"; color:red')]:
+        with pytest.raises(ValueError):
+            api.set_setting(key, bad)
+    with pytest.raises(KeyError):
+        api.set_setting("unknown", "x")
+
+
+def test_fonts_lists_system_families(api):
+    fonts = api.fonts()
+    assert fonts and not any(f.startswith("@") for f in fonts)
 
 
 def test_internal_attributes_hidden_from_js(api):

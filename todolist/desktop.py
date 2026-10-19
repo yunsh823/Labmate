@@ -17,6 +17,13 @@ WEB_DIR = Path(__file__).parent / "web"
 POPUP_W, POPUP_H, MARGIN = 380, 560, 12
 ACCENT = (79, 107, 237)
 
+TRAY_TEXT = {
+    "ko": {"today": "오늘 할 일", "main": "전체 창 열기", "quit": "종료",
+           "open": "ToDoList · 오늘 남은 할 일 {n}개", "clear": "ToDoList · 오늘 할 일을 모두 끝냈어요"},
+    "en": {"today": "Today", "main": "Open full window", "quit": "Quit",
+           "open": "ToDoList · {n} left today", "clear": "ToDoList · All done for today"},
+}
+
 
 def _font(size: int) -> ImageFont.FreeTypeFont:
     for name in ("segoeuib.ttf", "arialbd.ttf", "Arial Bold.ttf", "DejaVuSans-Bold.ttf"):
@@ -75,13 +82,14 @@ class Desktop:
         self.quitting = False
         self.popup_visible = False
         self.popup_hidden_at = 0.0
+        self.popup_shown_at = 0.0
 
         self.main = webview.create_window(
             "ToDoList", url=str(WEB_DIR / "index.html"), js_api=self.api,
             width=1080, height=720, min_size=(760, 480),
         )
         self.popup = webview.create_window(
-            "ToDoList 오늘", url=str(WEB_DIR / "popup.html"), js_api=self.api,
+            "ToDoList Today", url=str(WEB_DIR / "popup.html"), js_api=self.api,
             width=POPUP_W, height=POPUP_H, frameless=True, easy_drag=False,
             resizable=False, on_top=True, hidden=True,
         )
@@ -89,10 +97,11 @@ class Desktop:
 
         self.icon = pystray.Icon("ToDoList", make_icon(), "ToDoList", menu=pystray.Menu(
             # default=True: a left click on the tray icon runs this item.
-            pystray.MenuItem("오늘 할 일", lambda icon, item: self.toggle_popup(), default=True),
-            pystray.MenuItem("전체 창 열기", lambda icon, item: self.show_main()),
+            # Labels are callables so they follow the language setting.
+            pystray.MenuItem(lambda item: self._text("today"), lambda icon, item: self.toggle_popup(), default=True),
+            pystray.MenuItem(lambda item: self._text("main"), lambda icon, item: self.show_main()),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("종료", lambda icon, item: self.quit()),
+            pystray.MenuItem(lambda item: self._text("quit"), lambda icon, item: self.quit()),
         ))
 
     def run(self, debug: bool = False) -> None:
@@ -117,10 +126,14 @@ class Desktop:
 
     # --- called from the tray and from Api ----------------------------------
 
+    def _text(self, key: str) -> str:
+        return TRAY_TEXT[self.api._setting("lang")][key]
+
     def refresh_icon(self) -> None:
         n = self.api._open_today()
         self.icon.icon = make_icon(n)
-        self.icon.title = f"ToDoList · 오늘 남은 할 일 {n}개" if n else "ToDoList · 오늘 할 일을 모두 끝냈어요"
+        self.icon.title = self._text("open").format(n=n) if n else self._text("clear")
+        self.icon.update_menu()
 
     def toggle_popup(self) -> None:
         if self.popup_visible:
@@ -130,8 +143,15 @@ class Desktop:
         if time.monotonic() - self.popup_hidden_at < 0.4:
             return
         self.popup.move(*_popup_position())
+        self.popup_shown_at = time.monotonic()
         self.popup.show()
         self.popup_visible = True
+
+    def popup_blurred(self) -> None:
+        # Windows may refuse focus to a just-shown window (foreground lock), which
+        # blurs it immediately; ignore that so the popup doesn't vanish on open.
+        if time.monotonic() - self.popup_shown_at > 0.5:
+            self.hide_popup()
 
     def hide_popup(self) -> None:
         if not self.popup_visible:

@@ -10,7 +10,14 @@ from datetime import date
 
 from .db import BUCKETS, VIEWS, Store, Task
 
-THEMES = ("system", "light", "dark")
+# Allowed values per setting; None means free text (validated separately).
+SETTINGS = {
+    "theme": ("system", "light", "dark"),
+    "lang": ("ko", "en"),
+    "sidebar": ("expanded", "collapsed"),
+    "font": None,  # "" = app default, otherwise a system font family name
+}
+DEFAULTS = {"theme": "system", "lang": "ko", "sidebar": "expanded", "font": ""}
 
 
 def _task_dict(t: Task) -> dict:
@@ -24,6 +31,7 @@ class Api:
         self._store = store
         self._shell = shell  # desktop.Desktop when running as the app; None in tests
         self._lock = threading.Lock()
+        self._font_cache: list[str] | None = None
 
     def _open_today(self) -> int:
         with self._lock:
@@ -43,14 +51,39 @@ class Api:
                 "tasks": [_task_dict(t) for t in self._store.list_view(view, project, today)],
                 "counts": {v: self._store.count(v, project, today) for v in VIEWS},
                 "projects": self._store.projects(),
-                "theme": self._store.get_setting("theme", "system"),
+                "settings": {k: self._store.get_setting(k, v) for k, v in DEFAULTS.items()},
             }
 
-    def set_theme(self, theme: str) -> None:
-        if theme not in THEMES:
-            raise ValueError(theme)
+    def _setting(self, key: str) -> str:
         with self._lock:
-            self._store.set_setting("theme", theme)
+            return self._store.get_setting(key, DEFAULTS[key])
+
+    def set_setting(self, key: str, value: str) -> None:
+        allowed = SETTINGS[key]  # KeyError for unknown keys
+        if allowed is None:
+            if len(value) > 100 or any(c in value for c in '"\\;{}'):
+                raise ValueError(value)
+        elif value not in allowed:
+            raise ValueError(value)
+        with self._lock:
+            self._store.set_setting(key, value)
+        if key == "lang":
+            self._changed()  # tray tooltip follows the language
+
+    def fonts(self) -> list[str]:
+        """Font families installed on this system."""
+        if self._font_cache is None:
+            import tkinter
+            import tkinter.font
+            root = tkinter.Tk()
+            root.withdraw()
+            try:
+                names = tkinter.font.families(root)
+            finally:
+                root.destroy()
+            # "@Name" entries are vertical-writing variants on Windows.
+            self._font_cache = sorted({n for n in names if not n.startswith("@")}, key=str.casefold)
+        return self._font_cache
 
     def add(self, title: str, bucket: str = "today", project: str = "") -> int:
         with self._lock:
@@ -99,3 +132,7 @@ class Api:
     def hide_popup(self) -> None:
         if self._shell:
             self._shell.hide_popup()
+
+    def popup_blurred(self) -> None:
+        if self._shell:
+            self._shell.popup_blurred()

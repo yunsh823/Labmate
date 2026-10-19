@@ -9,19 +9,18 @@
 <body>
   <div class="app" id="app">
     <nav class="sidebar">
+      <button class="ghost icon-btn side-toggle" id="side-toggle" data-i18n-title="toggleSidebar"><span class="icon" data-icon="panel"></span></button>
       <ul class="nav" id="nav"></ul>
-      <div class="nav-label">프로젝트</div>
+      <div class="nav-label" data-i18n="projects"></div>
       <ul class="nav" id="projects"></ul>
-      <div class="theme" id="theme" role="radiogroup" aria-label="테마">
-        <button data-theme-set="system" role="radio">시스템</button>
-        <button data-theme-set="light" role="radio">라이트</button>
-        <button data-theme-set="dark" role="radio">다크</button>
-      </div>
+      <ul class="nav nav-bottom">
+        <li data-view="settings" id="settings-btn"><span class="icon" data-icon="gear"></span><span class="label" data-i18n="settings"></span></li>
+      </ul>
     </nav>
 
     <main class="main">
       <header class="head">
-        <div class="head-left">
+        <div class="head-top">
           <h1 id="title"></h1>
           <span class="head-date" id="subtitle"></span>
         </div>
@@ -29,43 +28,69 @@
       </header>
       <form class="quick-add" id="quick-add" autocomplete="off">
         <span class="icon" data-icon="plus"></span>
-        <input id="quick-input" placeholder="할 일 추가" aria-label="할 일 추가">
+        <input id="quick-input" data-i18n-aria="addTask">
       </form>
       <div class="list" id="list"></div>
       <div class="hint" id="hint"></div>
+
+      <section class="settings" id="settings" hidden>
+        <h2 data-i18n="general"></h2>
+        <div class="setting">
+          <div class="setting-label" data-i18n="theme"></div>
+          <div class="segmented" id="set-theme">
+            <button data-value="system" data-i18n="themeSystem"></button>
+            <button data-value="light" data-i18n="themeLight"></button>
+            <button data-value="dark" data-i18n="themeDark"></button>
+          </div>
+        </div>
+        <div class="setting">
+          <div class="setting-label" data-i18n="language"></div>
+          <div class="segmented" id="set-lang">
+            <button data-value="ko">한국어</button>
+            <button data-value="en">English</button>
+          </div>
+        </div>
+        <div class="setting">
+          <div class="setting-label" data-i18n="font"></div>
+          <div class="setting-control">
+            <select id="set-font"></select>
+            <div class="font-preview" id="font-preview">오늘 할 일 · Today's tasks 0123</div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <aside class="detail" id="detail" hidden>
       <div class="detail-top">
-        <button class="ghost icon-btn" id="detail-close" aria-label="닫기"><span class="icon" data-icon="x"></span></button>
+        <button class="ghost icon-btn" id="detail-close" data-i18n-aria="close"><span class="icon" data-icon="x"></span></button>
       </div>
-      <input class="detail-title" id="f-title" aria-label="제목">
-      <label class="field"><span>분류</span>
+      <input class="detail-title" id="f-title" data-i18n-aria="title">
+      <label class="field"><span data-i18n="bucket"></span>
         <select id="f-bucket">
-          <option value="today">오늘</option><option value="week">이번 주</option>
-          <option value="later">나중에</option><option value="someday">아이디어</option>
+          <option value="today" data-i18n="today"></option><option value="week" data-i18n="week"></option>
+          <option value="later" data-i18n="later"></option><option value="someday" data-i18n="someday"></option>
         </select>
       </label>
-      <label class="field"><span>프로젝트</span>
-        <input id="f-project" list="project-options" placeholder="없음">
+      <label class="field"><span data-i18n="project"></span>
+        <input id="f-project" list="project-options" data-i18n-ph="none">
         <datalist id="project-options"></datalist>
       </label>
-      <div class="field"><span>마감</span>
+      <div class="field"><span data-i18n="due"></span>
         <div class="row-2">
-          <input type="date" id="f-date" aria-label="마감일">
-          <input type="time" id="f-time" aria-label="시간">
+          <input type="date" id="f-date" data-i18n-aria="dueDate">
+          <input type="time" id="f-time" data-i18n-aria="time">
         </div>
       </div>
-      <label class="field"><span>반복</span>
+      <label class="field"><span data-i18n="repeat"></span>
         <select id="f-recurrence">
-          <option value="">없음</option><option value="daily">매일</option>
-          <option value="weekly">매주</option><option value="monthly">매월</option>
+          <option value="" data-i18n="none"></option><option value="daily" data-i18n="daily"></option>
+          <option value="weekly" data-i18n="weekly"></option><option value="monthly" data-i18n="monthly"></option>
         </select>
       </label>
-      <label class="field grow"><span>메모</span>
-        <textarea id="f-notes" placeholder="메모"></textarea>
+      <label class="field grow"><span data-i18n="notes"></span>
+        <textarea id="f-notes" data-i18n-ph="notes"></textarea>
       </label>
-      <button class="ghost danger" id="detail-delete"><span class="icon" data-icon="trash"></span>휴지통으로</button>
+      <button class="ghost danger" id="detail-delete"><span class="icon" data-icon="trash"></span><span data-i18n="moveToTrash"></span></button>
     </aside>
   </div>
   <script src="app.js"></script>
