@@ -23,10 +23,12 @@ ACCENT = (79, 107, 237)
 TRAY_TEXT = {
     "ko": {"today": "오늘 할 일", "main": "전체 창 열기", "quit": "종료",
            "open": "ToDoList · 오늘 남은 할 일 {n}개", "clear": "ToDoList · 오늘 할 일을 모두 끝냈어요",
-           "soon": "{m}분 후 시작", "soon_many": "곧 시작하는 일정 {n}개"},
+           "soon": "{m}분 후 시작", "soon_many": "곧 시작하는 일정 {n}개",
+           "papers": "새 논문이 도착했어요.", "papers_title": "ToDoList · 새 논문 {n}편"},
     "en": {"today": "Today", "main": "Open full window", "quit": "Quit",
            "open": "ToDoList · {n} left today", "clear": "ToDoList · All done for today",
-           "soon": "Starts in {m} min", "soon_many": "{n} items starting soon"},
+           "soon": "Starts in {m} min", "soon_many": "{n} items starting soon",
+           "papers": "New papers have arrived.", "papers_title": "ToDoList · {n} new papers"},
 }
 
 
@@ -93,6 +95,7 @@ class Desktop:
         self._sync_wakeup = threading.Event()
         self.hotkey_ok = False
         self._reminded: set[str] = set()
+        self._papers_retry_at = 0.0
 
         self.main = webview.create_window(
             "ToDoList", url=str(WEB_DIR / "index.html"), js_api=self.api,
@@ -130,6 +133,7 @@ class Desktop:
         while not self.quitting:
             self.refresh_icon()
             self._check_reminders()
+            self._check_papers()
             time.sleep(30)
 
     def _hotkey_loop(self) -> None:
@@ -144,6 +148,19 @@ class Desktop:
         while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
             if msg.message == WM_HOTKEY:
                 self.quick_add()
+
+    def _check_papers(self) -> None:
+        """Once a day; a failed attempt (offline at boot, say) is retried after 30 minutes."""
+        if time.monotonic() < self._papers_retry_at or not self.api._papers_due():
+            return
+        added, error = self.api._fetch_papers()
+        if error and not added:
+            self._papers_retry_at = time.monotonic() + 1800
+            return
+        if added:
+            text = self.api._json_setting_text("papers_notify_text") or self._text("papers")
+            self.icon.notify(text, self._text("papers_title").format(n=added))
+            self.after_sync()
 
     def _check_reminders(self) -> None:
         minutes = self.api._setting("remind")

@@ -24,6 +24,7 @@
           <h1 id="title"></h1>
           <span class="head-date" id="subtitle"></span>
           <button class="weather" id="weather" hidden></button>
+          <button class="btn" id="papers-fetch" hidden data-i18n="papersFetch"></button>
         </div>
         <div class="weather-panel" id="weather-panel" hidden></div>
         <div class="stats" id="stats"></div>
@@ -106,6 +107,75 @@
             <input class="text-input" id="place-input" data-i18n-ph="placeSearch" autocomplete="off">
             <div class="place-results" id="place-results" hidden></div>
           </div>
+        </div>
+
+        <h2 class="settings-group" data-i18n="papersGroup"></h2>
+        <div class="setting">
+          <div class="setting-label" data-i18n="papersEnabled"></div>
+          <div class="segmented" id="set-papers-enabled">
+            <button data-value="on" data-i18n="on"></button>
+            <button data-value="off" data-i18n="off"></button>
+          </div>
+        </div>
+        <div class="setting">
+          <div>
+            <div class="setting-label" data-i18n="papersPreprints"></div>
+            <div class="setting-desc" data-i18n="papersPreprintsDesc"></div>
+          </div>
+          <div class="segmented" id="set-papers-preprints">
+            <button data-value="on" data-i18n="include"></button>
+            <button data-value="off" data-i18n="exclude"></button>
+          </div>
+        </div>
+        <div class="setting">
+          <div>
+            <div class="setting-label" data-i18n="notifyText"></div>
+            <div class="setting-desc" id="notify-text-desc"></div>
+          </div>
+          <div class="setting-actions">
+            <input class="text-input" id="set-notify-text" maxlength="50">
+            <button class="btn" id="notify-text-save" data-i18n="save"></button>
+          </div>
+        </div>
+        <div class="setting column">
+          <div class="setting-row">
+            <div>
+              <div class="setting-label" data-i18n="seeds"></div>
+              <div class="setting-desc" data-i18n="seedsDesc"></div>
+            </div>
+            <div class="setting-actions">
+              <input class="text-input" id="seed-input" data-i18n-ph="seedPh">
+              <button class="btn" id="seed-add" data-i18n="add"></button>
+            </div>
+          </div>
+          <div class="chips" id="seed-list"></div>
+        </div>
+        <div class="setting column">
+          <div class="setting-row">
+            <div>
+              <div class="setting-label" data-i18n="keywords"></div>
+              <div class="setting-desc" data-i18n="keywordsDesc"></div>
+            </div>
+            <div class="setting-actions">
+              <input class="text-input" id="keyword-input" data-i18n-ph="keywordPh">
+              <button class="btn" id="keyword-add" data-i18n="add"></button>
+            </div>
+          </div>
+          <div class="chips" id="keyword-list"></div>
+        </div>
+        <div class="setting column">
+          <div class="setting-row">
+            <div>
+              <div class="setting-label" data-i18n="journals"></div>
+              <div class="setting-desc" data-i18n="journalsDesc"></div>
+            </div>
+            <div class="place-search">
+              <input class="text-input" id="journal-input" data-i18n-ph="journalPh" autocomplete="off">
+              <div class="place-results" id="journal-results" hidden></div>
+            </div>
+          </div>
+          <div class="chips" id="journal-list"></div>
+          <div class="setting-error" id="papers-settings-error" hidden></div>
         </div>
 
         <h2 class="settings-group" data-i18n="gcal"></h2>

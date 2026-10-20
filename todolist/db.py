@@ -35,6 +35,21 @@ CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS papers (
+    key          TEXT PRIMARY KEY,   -- lowercased DOI, or "t:" + normalized title
+    doi          TEXT,
+    title        TEXT NOT NULL,
+    first_author TEXT NOT NULL DEFAULT '',
+    author_count INTEGER NOT NULL DEFAULT 0,
+    venue        TEXT NOT NULL DEFAULT '',
+    pub_date     TEXT,               -- YYYY-MM-DD
+    url          TEXT NOT NULL DEFAULT '',
+    preprint     INTEGER NOT NULL DEFAULT 0,
+    reason_kind  TEXT NOT NULL,      -- seed | keyword | journal
+    reason_value TEXT NOT NULL DEFAULT '',
+    status       TEXT NOT NULL DEFAULT 'new',  -- new | seen | saved | hidden
+    fetched_at   TEXT NOT NULL
+);
 """
 
 
@@ -236,6 +251,47 @@ class Store:
             "SELECT DISTINCT project FROM tasks WHERE project != '' AND deleted_at IS NULL ORDER BY project"
         ).fetchall()
         return [r[0] for r in rows]
+
+    # --- paper alerts ---------------------------------------------------------
+
+    PAPER_COLS = ("key", "doi", "title", "first_author", "author_count", "venue", "pub_date",
+                  "url", "preprint", "reason_kind", "reason_value")
+
+    def paper_keys(self) -> set[str]:
+        return {r[0] for r in self.conn.execute("SELECT key FROM papers")}
+
+    def add_papers(self, papers: list[dict]) -> int:
+        now = _now()
+        cur = self.conn.executemany(
+            f"INSERT OR IGNORE INTO papers ({', '.join(self.PAPER_COLS)}, fetched_at) "
+            f"VALUES ({', '.join('?' * len(self.PAPER_COLS))}, ?)",
+            [[p[c] for c in self.PAPER_COLS] + [now] for p in papers],
+        )
+        self.conn.commit()
+        return cur.rowcount
+
+    def list_papers(self) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT * FROM papers WHERE status != 'hidden' ORDER BY fetched_at DESC, pub_date DESC LIMIT 200"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_paper(self, key: str) -> dict:
+        row = self.conn.execute("SELECT * FROM papers WHERE key = ?", (key,)).fetchone()
+        if row is None:
+            raise KeyError(key)
+        return dict(row)
+
+    def set_paper_status(self, key: str, status: str) -> None:
+        self.conn.execute("UPDATE papers SET status = ? WHERE key = ?", (status, key))
+        self.conn.commit()
+
+    def mark_papers_seen(self) -> None:
+        self.conn.execute("UPDATE papers SET status = 'seen' WHERE status = 'new'")
+        self.conn.commit()
+
+    def count_new_papers(self) -> int:
+        return self.conn.execute("SELECT COUNT(*) FROM papers WHERE status = 'new'").fetchone()[0]
 
     def timed_tasks_on(self, day: date) -> list[Task]:
         rows = self.conn.execute(

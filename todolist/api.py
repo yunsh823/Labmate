@@ -4,14 +4,16 @@ Every method returns JSON-serializable data. Names starting with "_" are
 hidden from JavaScript.
 """
 
+import json
 import threading
+import webbrowser
 from dataclasses import asdict
 from datetime import date
 
 from . import autostart
 from .db import BUCKETS, VIEWS, Store, Task
 from .gcal import CalendarSync
-from . import places
+from . import papers, places
 from .weather import Weather, latlon_to_grid
 
 # Allowed values per setting; None means free text (validated separately).
@@ -21,8 +23,13 @@ SETTINGS = {
     "sidebar": ("expanded", "collapsed"),
     "font": None,  # "" = app default, otherwise a system font family name
     "remind": ("off", "5", "10", "15", "30"),  # minutes before a timed task/event
+    "papers_enabled": ("on", "off"),
+    "papers_preprints": ("off", "on"),  # most people never read preprints, so off by default
 }
-DEFAULTS = {"theme": "system", "lang": "ko", "sidebar": "expanded", "font": "", "remind": "10"}
+DEFAULTS = {"theme": "system", "lang": "ko", "sidebar": "expanded", "font": "", "remind": "10",
+            "papers_enabled": "on", "papers_preprints": "off"}
+NOTIFY_TEXT_MAX = 50
+MAX_PAPER_ITEMS = 10  # per list: seed papers, keywords, journals
 
 
 def _task_dict(t: Task) -> dict:
@@ -80,7 +87,8 @@ class Api:
             return {
                 "today": today.isoformat(),
                 "tasks": [_task_dict(t) for t in self._store.list_view(view, project, today)],
-                "counts": {v: self._store.count(v, project, today) for v in VIEWS},
+                "counts": {**{v: self._store.count(v, project, today) for v in VIEWS},
+                           "papers": self._store.count_new_papers()},
                 "projects": self._store.projects(),
                 "settings": {k: self._store.get_setting(k, v) for k, v in DEFAULTS.items()},
                 "events": self._gcal.today_events if view == "today" else [],
@@ -170,6 +178,145 @@ class Api:
     def popup_blurred(self) -> None:
         if self._shell:
             self._shell.popup_blurred()
+
+    # --- paper alerts -------------------------------------------------------------
+    # Lists live in the settings table as JSON; errors are short codes the page translates.
+
+    def _json_setting_text(self, key: str) -> str:
+        with self._lock:
+            return self._store.get_setting(key, "")
+
+    def _json_setting(self, key: str) -> list:
+        with self._lock:
+            return json.loads(self._store.get_setting(key, "[]"))
+
+    def _set_json_setting(self, key: str, value: list) -> None:
+        with self._lock:
+            self._store.set_setting(key, json.dumps(value, ensure_ascii=False))
+
+    def papers_settings(self) -> dict:
+        with self._lock:
+            get = self._store.get_setting
+            info = {"enabled": get("papers_enabled", "on"), "preprints": get("papers_preprints", "off"),
+                    "notify_text": get("papers_notify_text", ""), "last_fetch": get("papers_last_fetch", ""),
+                    "error": get("papers_error", "")}
+        return {**info, "seeds": self._json_setting("papers_seeds"), "keywords": self._json_setting("papers_keywords"),
+                "journals": self._json_setting("papers_journals"), "notify_max": NOTIFY_TEXT_MAX}
+
+    def set_papers_notify_text(self, text: str) -> dict:
+        """Empty text means the default line ("새 논문이 도착했어요.")."""
+        text = " ".join(text.split())
+        if len(text) > NOTIFY_TEXT_MAX:
+            raise ValueError("too_long")
+        with self._lock:
+            self._store.set_setting("papers_notify_text", text)
+        return self.papers_settings()
+
+    def _add_to_list(self, key: str, item, same) -> dict:
+        items = self._json_setting(key)
+        if not any(same(x) for x in items):
+            if len(items) >= MAX_PAPER_ITEMS:
+                raise ValueError("too_many")
+            self._set_json_setting(key, items + [item])
+        return self.papers_settings()
+
+    def _remove_from_list(self, key: str, same) -> dict:
+        self._set_json_setting(key, [x for x in self._json_setting(key) if not same(x)])
+        return self.papers_settings()
+
+    def add_paper_seed(self, text: str) -> dict:
+        doi = papers.normalize_doi(text)
+        if not doi:
+            raise ValueError("bad_doi")
+        try:
+            title = papers.lookup_title(doi)
+        except papers.PaperError as e:
+            raise ValueError(e.code) from None
+        return self._add_to_list("papers_seeds", {"doi": doi, "title": title}, lambda x: x["doi"].lower() == doi.lower())
+
+    def remove_paper_seed(self, doi: str) -> dict:
+        return self._remove_from_list("papers_seeds", lambda x: x["doi"] == doi)
+
+    def add_paper_keyword(self, keyword: str) -> dict:
+        keyword = " ".join(keyword.replace(",", " ").split())[:60]
+        if not keyword:
+            raise ValueError("empty")
+        return self._add_to_list("papers_keywords", keyword, lambda x: x.lower() == keyword.lower())
+
+    def remove_paper_keyword(self, keyword: str) -> dict:
+        return self._remove_from_list("papers_keywords", lambda x: x == keyword)
+
+    def search_journals(self, query: str) -> list[dict]:
+        if not query.strip():
+            return []
+        try:
+            return papers.search_journals(query.strip())
+        except papers.PaperError:
+            return []
+
+    def add_paper_journal(self, journal_id: str, name: str) -> dict:
+        return self._add_to_list("papers_journals", {"id": journal_id, "name": name}, lambda x: x["id"] == journal_id)
+
+    def remove_paper_journal(self, journal_id: str) -> dict:
+        return self._remove_from_list("papers_journals", lambda x: x["id"] == journal_id)
+
+    def _paper_sources(self) -> tuple[list[str], list[str], list[dict]]:
+        return ([s["doi"] for s in self._json_setting("papers_seeds")], self._json_setting("papers_keywords"),
+                self._json_setting("papers_journals"))
+
+    def _fetch_papers(self) -> tuple[int, str | None]:
+        """Fetch today's papers. Returns (number added, error code)."""
+        seeds, keywords, journals = self._paper_sources()
+        if not (seeds or keywords or journals):
+            return 0, None
+        with self._lock:
+            known = self._store.paper_keys()
+            include_preprints = self._store.get_setting("papers_preprints", "off") == "on"
+        found, error = papers.fetch(seeds, keywords, journals, known, include_preprints)
+        with self._lock:
+            added = self._store.add_papers(found)
+            self._store.set_setting("papers_error", error or "")
+            if added or not error:  # a total failure is retried later instead of skipping the day
+                self._store.set_setting("papers_last_fetch", date.today().isoformat())
+        return added, error
+
+    def _papers_due(self) -> bool:
+        with self._lock:
+            enabled = self._store.get_setting("papers_enabled", "on") == "on"
+            last = self._store.get_setting("papers_last_fetch", "")
+        return enabled and last != date.today().isoformat() and any(self._paper_sources())
+
+    def papers_list(self) -> dict:
+        """Papers for the 논문 tab. Opening the tab counts as seeing the new ones."""
+        with self._lock:
+            items = self._store.list_papers()
+            self._store.mark_papers_seen()
+        settings = self.papers_settings()
+        return {"papers": items, "last_fetch": settings["last_fetch"], "error": settings["error"],
+                "has_sources": any(self._paper_sources())}
+
+    def fetch_papers_now(self) -> dict:
+        self._fetch_papers()
+        return self.papers_list()
+
+    def open_paper(self, key: str) -> None:
+        with self._lock:
+            url = self._store.get_paper(key)["url"]
+        if url.startswith(("https://", "http://")):
+            webbrowser.open(url)
+
+    def save_paper(self, key: str) -> None:
+        """Add "읽기: <title>" to Later, with the link in the notes."""
+        with self._lock:
+            p = self._store.get_paper(key)
+            prefix = "읽기: " if self._store.get_setting("lang", "ko") == "ko" else "Read: "
+            self._store.add((prefix + p["title"])[:200], bucket="later", notes=p["url"])
+            self._store.set_paper_status(key, "saved")
+        self._changed()
+
+    def hide_paper(self, key: str) -> None:
+        with self._lock:
+            self._store.set_paper_status(key, "hidden")
 
     # --- weather (KMA API Hub) ----------------------------------------------------
     # The key is stored like other settings but never sent back to the page.

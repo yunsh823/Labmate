@@ -21,6 +21,8 @@ const ICONS = {
   wrain: '<path d="M7 15h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 6.1 4.5 4.5 0 0 0 7 15z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/>',
   wsnow: '<path d="M7 15h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 6.1 4.5 4.5 0 0 0 7 15z"/><path d="M8 18.5h.01M12 18.5h.01M16 18.5h.01M10 21.5h.01M14 21.5h.01"/>',
   wsleet: '<path d="M7 15h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 6.1 4.5 4.5 0 0 0 7 15z"/><path d="M8 18l-1 3M12 19h.01M16 18l-1 3"/>',
+  paper: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
+  bookmark: '<path d="M7 4h10v16l-5-4-5 4z"/>',
   umbrella: '<path d="M3 12a9 9 0 0 1 18 0z"/><path d="M12 12v6a2 2 0 0 0 4 0"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
 };
@@ -60,6 +62,28 @@ const STRINGS = {
     weatherNone: "동네를 검색해서 고르세요", weatherBadKey: "키를 확인하세요",
     placeSearch: "동네 검색 (예: 대구 동구)", placeNone: "찾는 동네가 없어요", placeMore: n => `외 ${n}곳 · 더 자세히 입력하세요`,
     weatherError: "날씨 오류", hourly: "시간별 예보",
+    papers: "논문", papersNew: "새 논문", papersFetch: "지금 가져오기", papersFetching: "가져오는 중…",
+    papersUpdated: d => `최근 7일 논문 · 업데이트 ${d}`, papersNever: "아직 가져오지 않았어요",
+    papersEmpty: "새 논문이 없어요", papersNoSource: "설정 → 논문 알림에서 기준 논문이나 키워드를 추가하세요",
+    papersSave: "읽을 거리로 추가", papersSaved: "추가됨", papersHide: "숨기기", papersPreprint: "프리프린트",
+    hintPapers: "제목 클릭: 논문 열기 · 읽을 거리로 추가하면 '나중에'에 할 일이 생겨요",
+    reasonSeed: "기준 논문 추천", reasonKeyword: v => `키워드: ${v}`, reasonJournal: v => `저널: ${v}`,
+    authors: (a, n) => (n > 1 ? `${a} 외 ${n - 1}명` : a),
+    papersGroup: "논문 알림", papersEnabled: "논문 알림", papersPreprints: "프리프린트 포함",
+    papersPreprintsDesc: "arXiv, Research Square 같은 심사 전 논문", include: "포함", exclude: "제외",
+    notifyText: "알림 문구", notifyTextDesc: n => `새 논문이 오면 Windows 알림으로 표시 · 최대 ${n}자 · 비우면 기본 문구`,
+    notifyDefault: "새 논문이 도착했어요.",
+    seeds: "기준 논문", seedsDesc: "DOI로 추가하면 관련된 최근 논문을 추천해요",
+    seedPh: "DOI 붙여 넣기 (예: 10.1175/JCLI-D-17-0034.1)",
+    keywords: "키워드", keywordsDesc: "제목·초록에 이 구절이 들어간 최근 논문 · 넓은 단어보다 구체적인 구절이나 저널 지정이 정확해요",
+    keywordPh: "예: atmospheric blocking",
+    journals: "저널", journalsDesc: "고르면 키워드 검색을 이 저널로 좁혀요", journalPh: "저널 이름 검색",
+    add: "추가", remove: "삭제",
+    paperErr: {
+      rate_limited: "추천 서비스가 요청을 잠시 거절했어요. 조금 뒤 다시 시도하세요.", network: "인터넷 연결을 확인하세요.",
+      not_found: "그 DOI의 논문을 찾지 못했어요.", bad_doi: "DOI 형식이 아니에요.", too_long: "50자 이내로 써 주세요.",
+      too_many: "최대 10개까지 추가할 수 있어요.", empty: "내용을 입력하세요.",
+    },
     notifications: "알림", remind: "일정 시작 전 알림", remindOff: "끄기", minutes: n => `${n}분`,
     remindDesc: "시간이 정해진 오늘 할 일과 캘린더 일정",
     hotkey: "빠른 입력 단축키", hotkeyDesc: "어디서든 눌러 오늘 할 일을 바로 추가",
@@ -103,6 +127,28 @@ const STRINGS = {
     weatherNone: "Search for your neighbourhood", weatherBadKey: "Check the key",
     placeSearch: "Search places (e.g. 대구 동구)", placeNone: "No matching place", placeMore: n => `${n} more · type more to narrow`,
     weatherError: "Weather error", hourly: "Hourly forecast",
+    papers: "Papers", papersNew: "new", papersFetch: "Fetch now", papersFetching: "Fetching…",
+    papersUpdated: d => `Papers from the last 7 days · updated ${d}`, papersNever: "Not fetched yet",
+    papersEmpty: "No new papers", papersNoSource: "Add seed papers or keywords in Settings → Paper alerts",
+    papersSave: "Add to reading list", papersSaved: "Added", papersHide: "Hide", papersPreprint: "Preprint",
+    hintPapers: "Click a title to open it · adding to the reading list creates a task in Later",
+    reasonSeed: "From your seed papers", reasonKeyword: v => `Keyword: ${v}`, reasonJournal: v => `Journal: ${v}`,
+    authors: (a, n) => (n > 1 ? `${a} et al.` : a),
+    papersGroup: "Paper alerts", papersEnabled: "Paper alerts", papersPreprints: "Include preprints",
+    papersPreprintsDesc: "Not yet peer reviewed, e.g. arXiv, Research Square", include: "Include", exclude: "Exclude",
+    notifyText: "Notification text", notifyTextDesc: n => `Shown as a Windows notification · up to ${n} characters · empty for default`,
+    notifyDefault: "New papers have arrived.",
+    seeds: "Seed papers", seedsDesc: "Add by DOI to get related recent papers",
+    seedPh: "Paste a DOI (e.g. 10.1175/JCLI-D-17-0034.1)",
+    keywords: "Keywords", keywordsDesc: "Recent papers with this phrase in the title or abstract · specific phrases or chosen journals work best",
+    keywordPh: "e.g. atmospheric blocking",
+    journals: "Journals", journalsDesc: "Narrow keyword results to these journals", journalPh: "Search journals",
+    add: "Add", remove: "Remove",
+    paperErr: {
+      rate_limited: "The recommendation service is busy. Try again shortly.", network: "Check your internet connection.",
+      not_found: "No paper found for that DOI.", bad_doi: "That isn't a DOI.", too_long: "Keep it within 50 characters.",
+      too_many: "You can add up to 10.", empty: "Type something first.",
+    },
     notifications: "Notifications", remind: "Remind before start", remindOff: "Off", minutes: n => `${n} min`,
     remindDesc: "Timed tasks and calendar events today",
     hotkey: "Quick add shortcut", hotkeyDesc: "Press anywhere to add a task for today",
@@ -124,7 +170,7 @@ let T = STRINGS.ko;
 
 const VIEWS = [
   { id: "today", icon: "sun" }, { id: "week", icon: "week" }, { id: "later", icon: "clock" },
-  { id: "someday", icon: "bulb" }, null, { id: "done", icon: "done" }, { id: "trash", icon: "trash" },
+  { id: "someday", icon: "bulb" }, { id: "papers", icon: "paper" }, null, { id: "done", icon: "done" }, { id: "trash", icon: "trash" },
 ];
 const BUCKETS = ["today", "week", "later", "someday"];
 // Pretendard ships with the app (web/fonts, SIL OFL); the rest are fallbacks.
@@ -195,8 +241,10 @@ async function setSetting(key, value) {
 // --- rendering -------------------------------------------------------------
 
 async function load() {
-  // The settings page still needs counts for the sidebar; fetch Today behind it.
-  S.data = await api().state(S.view === "settings" ? "today" : S.view, S.project);
+  // Settings and Papers still need counts for the sidebar; fetch Today behind them.
+  const own = ["settings", "papers"].includes(S.view);
+  S.data = await api().state(own ? "today" : S.view, S.project);
+  if (S.view === "papers") S.papers = await api().papers_list();
   if (S.selected && !S.data.tasks.some(t => t.id === S.selected)) closeDetail();
   render();
 }
@@ -211,6 +259,7 @@ function render() {
   }
   renderHeader();
   if (settings) return renderSettings();
+  if (S.view === "papers") return renderPapers();
   renderList();
 }
 
@@ -258,7 +307,9 @@ function renderHeader() {
   const { today, tasks } = S.data;
   const t = parseDate(today);
   const settings = S.view === "settings";
-  $("title").textContent = T[S.view] + (S.project && !settings ? ` · ${S.project}` : "");
+  const papersView = S.view === "papers";
+  $("title").textContent = T[S.view] + (S.project && !settings && !papersView ? ` · ${S.project}` : "");
+  if (!POPUP) $("papers-fetch").hidden = !papersView;
 
   let date = "";
   if (S.view === "today") {
@@ -271,6 +322,7 @@ function renderHeader() {
     sun.setDate(mon.getDate() + 6);
     date = `${T.day(mon)} – ${T.day(sun, sun.getMonth() !== mon.getMonth())}`;
   }
+  if (papersView) date = S.papers.last_fetch ? T.papersUpdated(S.papers.last_fetch) : T.papersNever;
   $("subtitle").textContent = date;
   renderWeather();
 
@@ -278,6 +330,9 @@ function renderHeader() {
   let stats = "";
   if (settings) {
     stats = "";
+  } else if (papersView) {
+    const fresh = S.papers.papers.filter(p => p.status === "new").length;
+    stats = stat(fresh, T.papersNew) + stat(S.papers.papers.length, T.papers, "muted");
   } else if (S.view === "today") {
     const overdue = tasks.filter(x => !x.done && x.due_date && daysUntil(x.due_date) < 0).length;
     stats = stat(open, T.open) + (overdue ? stat(overdue, T.overdue, "danger") : "")
@@ -293,7 +348,7 @@ function renderHeader() {
   const canAdd = BUCKETS.includes(S.view);
   $("quick-add").hidden = !canAdd;
   if (canAdd) $("quick-input").placeholder = T.ph[S.view];
-  if (!POPUP) $("hint").textContent = S.view === "trash" ? T.hintTrash : T.hint;
+  if (!POPUP) $("hint").textContent = S.view === "trash" ? T.hintTrash : papersView ? T.hintPapers : T.hint;
 }
 
 function renderList() {
@@ -327,6 +382,41 @@ function eventsSection() {
       <span class="ev-title">${esc(e.title)}</span>
       <span class="ev-cal">${esc(e.calendar)}</span>
     </div>`).join("");
+}
+
+function renderPapers() {
+  const { papers, has_sources, error } = S.papers;
+  const reason = p => p.reason_kind === "seed" ? T.reasonSeed
+    : p.reason_kind === "keyword" ? T.reasonKeyword(p.reason_value) : T.reasonJournal(p.reason_value);
+  let html = error ? `<div class="banner">${T.paperErr[error] || error}</div>` : "";
+  html += papers.map(p => `
+    <div class="paper" data-paper="${esc(p.key)}">
+      <span class="new-dot ${p.status === "new" ? "" : "off"}"></span>
+      <div class="body">
+        <div class="ptitle" data-paper-open>${esc(p.title)}</div>
+        <div class="pmeta">
+          ${p.first_author ? `<span>${esc(T.authors(p.first_author, p.author_count))}</span>` : ""}
+          ${p.venue ? `<span>${esc(p.venue)}</span>` : ""}
+          ${p.pub_date ? `<span>${p.pub_date}</span>` : ""}
+          <span class="chip">${esc(reason(p))}</span>
+          ${p.preprint ? `<span class="chip">${T.papersPreprint}</span>` : ""}
+        </div>
+      </div>
+      <div class="pactions">
+        ${p.status === "saved" ? `<span class="saved">${T.papersSaved}</span>`
+          : `<button class="ghost icon-btn" data-paper-save title="${T.papersSave}" aria-label="${T.papersSave}">${icon("bookmark")}</button>`}
+        <button class="ghost icon-btn" data-paper-hide title="${T.papersHide}" aria-label="${T.papersHide}">${icon("x")}</button>
+      </div>
+    </div>`).join("");
+  if (!papers.length) html += empty(has_sources ? T.papersEmpty : T.papersNoSource);
+  $("list").innerHTML = html;
+}
+
+async function onPaperClick(e, row) {
+  const key = row.dataset.paper;
+  if (e.target.closest("[data-paper-open]")) return api().open_paper(key);
+  if (e.target.closest("[data-paper-save]")) { await api().save_paper(key); return load(); }
+  if (e.target.closest("[data-paper-hide]")) { await api().hide_paper(key); return load(); }
 }
 
 function section(title, tasks, cls = "") {
@@ -382,6 +472,7 @@ async function renderSettings() {
   $("set-remind").innerHTML = ["off", "5", "10", "15", "30"].map(v =>
     `<button data-value="${v}" aria-pressed="${v === S.data.settings.remind}">${v === "off" ? T.remindOff : T.minutes(v)}</button>`).join("");
   renderWeatherSettings(await api().weather_settings());
+  renderPapersSettings(await api().papers_settings());
   const info = await api().app_info();
   renderAutostart(info);
   $("hotkey-desc").textContent = info.hotkey_ok ? T.hotkeyDesc : T.hotkeyBusy;
@@ -397,6 +488,34 @@ function renderAutostart(info) {
     b.setAttribute("aria-pressed", (b.dataset.value === "on") === info.autostart);
   });
 }
+
+function renderPapersSettings(st, errorCode = "") {
+  $("set-papers-enabled").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.value === st.enabled));
+  $("set-papers-preprints").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.value === st.preprints));
+  $("set-notify-text").placeholder = T.notifyDefault;
+  $("set-notify-text").value = st.notify_text;
+  $("notify-text-desc").textContent = T.notifyTextDesc(st.notify_max);
+  const chip = (label, attr, value) =>
+    `<span class="chip-item" title="${esc(label)}"><span>${esc(label)}</span><button ${attr}="${esc(value)}" aria-label="${T.remove}">${icon("x")}</button></span>`;
+  $("seed-list").innerHTML = st.seeds.map(s => chip(s.title ? `${s.title} (${s.doi})` : s.doi, "data-seed", s.doi)).join("");
+  $("keyword-list").innerHTML = st.keywords.map(k => chip(k, "data-keyword", k)).join("");
+  $("journal-list").innerHTML = st.journals.map(j => chip(j.name, "data-journal", j.id)).join("");
+  $("papers-settings-error").hidden = !errorCode;
+  $("papers-settings-error").textContent = T.paperErr[errorCode] || "";
+}
+
+async function papersAction(call) {
+  try {
+    renderPapersSettings(await call());
+    return true;
+  } catch (err) {
+    const code = String(err && (err.message || err)).match(/[a-z_]+$/);
+    renderPapersSettings(await api().papers_settings(), code ? code[0] : "network");
+    return false;
+  }
+}
+
+let journalTimer = null;
 
 function renderWeatherSettings(st, failed = false) {
   $("set-kma-key").placeholder = st.has_key ? T.kmaKeySaved : "";
@@ -463,6 +582,61 @@ function bindSettings() {
   $("set-autostart").addEventListener("click", async e => {
     const b = e.target.closest("[data-value]");
     if (b && !b.disabled) renderAutostart(await api().set_autostart(b.dataset.value === "on"));
+  });
+  for (const [id, key] of [["set-papers-enabled", "papers_enabled"], ["set-papers-preprints", "papers_preprints"]]) {
+    $(id).addEventListener("click", e => {
+      const b = e.target.closest("[data-value]");
+      if (b) setSetting(key, b.dataset.value).then(async () => renderPapersSettings(await api().papers_settings()));
+    });
+  }
+  $("notify-text-save").addEventListener("click", () => papersAction(() => api().set_papers_notify_text($("set-notify-text").value)));
+  const addOnEnter = (input, button) => $(input).addEventListener("keydown", e => { if (e.key === "Enter") $(button).click(); });
+  $("seed-add").addEventListener("click", async () => {
+    if (await papersAction(() => api().add_paper_seed($("seed-input").value))) $("seed-input").value = "";
+  });
+  $("keyword-add").addEventListener("click", async () => {
+    if (await papersAction(() => api().add_paper_keyword($("keyword-input").value))) $("keyword-input").value = "";
+  });
+  addOnEnter("seed-input", "seed-add");
+  addOnEnter("keyword-input", "keyword-add");
+  $("settings").addEventListener("click", e => {
+    const b = e.target.closest("[data-seed], [data-keyword], [data-journal]");
+    if (!b) return;
+    if (b.dataset.seed) papersAction(() => api().remove_paper_seed(b.dataset.seed));
+    else if (b.dataset.keyword) papersAction(() => api().remove_paper_keyword(b.dataset.keyword));
+    else papersAction(() => api().remove_paper_journal(b.dataset.journal));
+  });
+  $("journal-input").addEventListener("input", () => {
+    clearTimeout(journalTimer);
+    journalTimer = setTimeout(async () => {
+      const q = $("journal-input").value.trim();
+      const box = $("journal-results");
+      if (!q) { box.hidden = true; return; }
+      const found = await api().search_journals(q);
+      if (q !== $("journal-input").value.trim()) return;
+      box.innerHTML = found.length
+        ? found.map(j => `<button data-journal-id="${esc(j.id)}" data-journal-name="${esc(j.name)}">${esc(j.name)}</button>`).join("")
+        : `<div class="more">${T.placeNone}</div>`;
+      box.hidden = false;
+    }, 250);
+  });
+  $("journal-results").addEventListener("click", async e => {
+    const b = e.target.closest("[data-journal-id]");
+    if (!b) return;
+    $("journal-results").hidden = true;
+    $("journal-input").value = "";
+    await papersAction(() => api().add_paper_journal(b.dataset.journalId, b.dataset.journalName));
+  });
+  document.addEventListener("click", e => {
+    if (!e.target.closest("#journal-input, #journal-results")) $("journal-results").hidden = true;
+  });
+  $("papers-fetch").addEventListener("click", async () => {
+    $("papers-fetch").disabled = true;
+    $("papers-fetch").textContent = T.papersFetching;
+    S.papers = await api().fetch_papers_now();
+    $("papers-fetch").disabled = false;
+    $("papers-fetch").textContent = T.papersFetch;
+    await load();
   });
   $("kma-key-save").addEventListener("click", async () => {
     try {
@@ -593,7 +767,12 @@ function bindPopup() {
 }
 
 // Called from Python after a calendar sync changed tasks or today's events.
-window.reloadData = () => { if (S.data && S.view !== "settings") load(); };
+window.reloadData = async () => {
+  if (!S.data) return;
+  if (S.view !== "settings") return load();
+  S.data = await api().state("today");  // keep the sidebar counts current without redrawing the form
+  if (!POPUP) renderNav();
+};
 
 // Called from Python for the global quick-add hotkey.
 window.focusQuickAdd = () => { $("quick-input").focus(); $("quick-input").select(); };
@@ -618,6 +797,8 @@ function bindShared() {
   });
   $("list").addEventListener("click", async e => {
     if (e.target.closest("[data-goto-settings]")) { S.view = "settings"; return load(); }
+    const paperRow = e.target.closest(".paper");
+    if (paperRow) return onPaperClick(e, paperRow);
     const row = e.target.closest(".task");
     if (!row) return;
     const id = Number(row.dataset.id);
