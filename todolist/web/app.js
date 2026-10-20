@@ -55,9 +55,10 @@ const STRINGS = {
     autostartDesc: "로그인하면 트레이에서 바로 시작", autostartDev: "설치한 앱에서만 쓸 수 있어요",
     events: "일정", allDay: "종일",
     weather: "날씨", kmaKey: "기상청 API 키", kmaKeyDesc: "기상청 API 허브에서 발급한 인증키",
-    kmaKeySaved: "저장됨 · 바꾸려면 새 키 입력", location: "위치", lat: "위도", lon: "경도", save: "저장",
+    kmaKeySaved: "저장됨 · 바꾸려면 새 키 입력", location: "위치", save: "저장",
     weatherGrid: (nx, ny) => `기상청 격자 ${nx}, ${ny}`, weatherUpdated: t => `업데이트 ${t}`,
-    weatherNone: "지도 앱에서 위치를 우클릭하면 좌표를 복사할 수 있어요", weatherBad: "키나 위도·경도를 확인하세요",
+    weatherNone: "동네를 검색해서 고르세요", weatherBadKey: "키를 확인하세요",
+    placeSearch: "동네 검색 (예: 대구 동구)", placeNone: "찾는 동네가 없어요", placeMore: n => `외 ${n}곳 · 더 자세히 입력하세요`,
     weatherError: "날씨 오류", hourly: "시간별 예보",
     notifications: "알림", remind: "일정 시작 전 알림", remindOff: "끄기", minutes: n => `${n}분`,
     remindDesc: "시간이 정해진 오늘 할 일과 캘린더 일정",
@@ -97,9 +98,10 @@ const STRINGS = {
     autostartDesc: "Start in the tray when you sign in", autostartDev: "Available in the installed app",
     events: "Events", allDay: "All day",
     weather: "Weather", kmaKey: "KMA API key", kmaKeyDesc: "Auth key issued by the KMA API Hub",
-    kmaKeySaved: "Saved · enter a new key to replace it", location: "Location", lat: "Lat", lon: "Lon", save: "Save",
+    kmaKeySaved: "Saved · enter a new key to replace it", location: "Location", save: "Save",
     weatherGrid: (nx, ny) => `KMA grid ${nx}, ${ny}`, weatherUpdated: t => `Updated ${t}`,
-    weatherNone: "Right-click a place in a map app to copy its coordinates", weatherBad: "Check the key and coordinates",
+    weatherNone: "Search for your neighbourhood", weatherBadKey: "Check the key",
+    placeSearch: "Search places (e.g. 대구 동구)", placeNone: "No matching place", placeMore: n => `${n} more · type more to narrow`,
     weatherError: "Weather error", hourly: "Hourly forecast",
     notifications: "Notifications", remind: "Remind before start", remindOff: "Off", minutes: n => `${n} min`,
     remindDesc: "Timed tasks and calendar events today",
@@ -399,13 +401,31 @@ function renderAutostart(info) {
 function renderWeatherSettings(st, failed = false) {
   $("set-kma-key").placeholder = st.has_key ? T.kmaKeySaved : "";
   $("set-kma-key").value = "";
-  $("set-lat").value = st.lat;
-  $("set-lon").value = st.lon;
-  let desc = st.grid ? T.weatherGrid(...st.grid) : T.weatherNone;
+  let desc = st.grid ? [st.place, T.weatherGrid(...st.grid)].filter(Boolean).map(esc).join(" · ") : T.weatherNone;
   if (st.updated && !st.error) desc += ` · ${T.weatherUpdated(st.updated)}`;
-  if (failed) desc += `<div class="setting-error">${T.weatherBad}</div>`;
+  if (failed) desc += `<div class="setting-error">${T.weatherBadKey}</div>`;
   else if (st.error) desc += `<div class="setting-error">${T.weatherError}: ${esc(st.error)}</div>`;
   $("weather-desc").innerHTML = desc;
+}
+
+let placeTimer = null;
+async function searchPlaces() {
+  const q = $("place-input").value.trim();
+  const box = $("place-results");
+  if (!q) { box.hidden = true; return; }
+  const { results, total } = await api().search_places(q);
+  if (q !== $("place-input").value.trim()) return;  // a newer keystroke already ran
+  box.innerHTML = results.length
+    ? results.map(r => `<button data-place="${r.id}">${esc(r.name)}</button>`).join("")
+      + (total > results.length ? `<div class="more">${T.placeMore(total - results.length)}</div>` : "")
+    : `<div class="more">${T.placeNone}</div>`;
+  box.hidden = false;
+}
+
+async function choosePlace(id) {
+  $("place-results").hidden = true;
+  $("place-input").value = "";
+  renderWeatherSettings(await api().set_weather_place(id));
 }
 
 function renderGcal(st, busy = false) {
@@ -444,14 +464,38 @@ function bindSettings() {
     const b = e.target.closest("[data-value]");
     if (b && !b.disabled) renderAutostart(await api().set_autostart(b.dataset.value === "on"));
   });
-  $("weather-save").addEventListener("click", async () => {
-    $("weather-save").disabled = true;
+  $("kma-key-save").addEventListener("click", async () => {
     try {
-      renderWeatherSettings(await api().set_weather($("set-kma-key").value, $("set-lat").value, $("set-lon").value));
+      renderWeatherSettings(await api().set_weather_key($("set-kma-key").value));
     } catch {
       renderWeatherSettings(await api().weather_settings(), true);
     }
-    $("weather-save").disabled = false;
+  });
+  $("place-input").addEventListener("input", () => {
+    clearTimeout(placeTimer);
+    placeTimer = setTimeout(searchPlaces, 120);
+  });
+  $("place-input").addEventListener("keydown", e => {
+    const items = [...$("place-results").querySelectorAll("[data-place]")];
+    if (!items.length) return;
+    const i = items.findIndex(b => b.classList.contains("active"));
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const next = items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1) + (i < 0 && e.key === "ArrowUp" ? 1 : 0)) % items.length];
+      items.forEach(b => b.classList.toggle("active", b === next));
+      next.scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter") {
+      choosePlace((items[i] || items[0]).dataset.place);
+    } else if (e.key === "Escape") {
+      $("place-results").hidden = true;
+    }
+  });
+  $("place-results").addEventListener("click", e => {
+    const b = e.target.closest("[data-place]");
+    if (b) choosePlace(b.dataset.place);
+  });
+  document.addEventListener("click", e => {
+    if (!e.target.closest(".place-search")) $("place-results").hidden = true;
   });
   $("set-remind").addEventListener("click", e => {
     const b = e.target.closest("[data-value]");

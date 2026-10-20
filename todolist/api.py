@@ -11,6 +11,7 @@ from datetime import date
 from . import autostart
 from .db import BUCKETS, VIEWS, Store, Task
 from .gcal import CalendarSync
+from . import places
 from .weather import Weather, latlon_to_grid
 
 # Allowed values per setting; None means free text (validated separately).
@@ -173,12 +174,23 @@ class Api:
     # --- weather (KMA API Hub) ----------------------------------------------------
     # The key is stored like other settings but never sent back to the page.
 
-    def _weather_config(self) -> tuple[str, float, float] | None:
+    def _weather_place(self) -> tuple[str, tuple[int, int] | None]:
+        """Chosen neighbourhood name and its official KMA grid."""
+        with self._lock:
+            name = self._store.get_setting("weather_place", "")
+            nx, ny = self._store.get_setting("weather_nx", ""), self._store.get_setting("weather_ny", "")
+            lat, lon = self._store.get_setting("weather_lat", ""), self._store.get_setting("weather_lon", "")
+        if nx and ny:
+            return name, (int(nx), int(ny))
+        if lat and lon:  # set by an earlier version as coordinates
+            return name, latlon_to_grid(float(lat), float(lon))
+        return name, None
+
+    def _weather_config(self) -> tuple[str, tuple[int, int]] | None:
         with self._lock:
             key = self._store.get_setting("kma_key", "")
-            lat = self._store.get_setting("weather_lat", "")
-            lon = self._store.get_setting("weather_lon", "")
-        return (key, float(lat), float(lon)) if key and lat and lon else None
+        grid = self._weather_place()[1]
+        return (key, grid) if key and grid else None
 
     def _refresh_weather(self) -> None:
         config = self._weather_config()
@@ -187,28 +199,33 @@ class Api:
 
     def weather_settings(self) -> dict:
         with self._lock:
-            lat = self._store.get_setting("weather_lat", "")
-            lon = self._store.get_setting("weather_lon", "")
             has_key = bool(self._store.get_setting("kma_key", ""))
+        name, grid = self._weather_place()
         return {
-            "has_key": has_key, "lat": lat, "lon": lon,
-            "grid": latlon_to_grid(float(lat), float(lon)) if lat and lon else None,
+            "has_key": has_key, "place": name, "grid": grid,
             "updated": (self._weather.data or {}).get("updated"), "error": self._weather.error,
         }
 
-    def set_weather(self, key: str, lat: str, lon: str) -> dict:
-        """Save key (blank keeps the current one) and location, then refresh right away."""
-        key, lat, lon = key.strip(), float(lat), float(lon)
-        if key and (len(key) > 200 or any(c.isspace() for c in key)):
+    def search_places(self, query: str) -> dict:
+        results, total = places.search(query)
+        return {"results": results, "total": total}
+
+    def set_weather_key(self, key: str) -> dict:
+        key = key.strip()
+        if not key or len(key) > 200 or any(c.isspace() for c in key):
             raise ValueError("bad key")
-        if not (32 <= lat <= 40 and 123 <= lon <= 133):  # KMA grid covers the Korean peninsula
-            raise ValueError("location outside KMA forecast area")
         with self._lock:
-            if key:
-                self._store.set_setting("kma_key", key)
-            self._store.set_setting("weather_lat", f"{lat:.4f}")
-            self._store.set_setting("weather_lon", f"{lon:.4f}")
-        self._weather._daily = None  # location may have changed
+            self._store.set_setting("kma_key", key)
+        self._refresh_weather()
+        return self.weather_settings()
+
+    def set_weather_place(self, place_id: int) -> dict:
+        name, nx, ny = places.get(int(place_id))
+        with self._lock:
+            self._store.set_setting("weather_place", name)
+            self._store.set_setting("weather_nx", str(nx))
+            self._store.set_setting("weather_ny", str(ny))
+        self._weather._daily = None  # the cached min/max belonged to the old place
         self._refresh_weather()
         return self.weather_settings()
 

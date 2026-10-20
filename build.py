@@ -47,6 +47,7 @@ def main() -> None:
         "--icon", str(icon),
         "--distpath", str(ROOT / "dist"), "--workpath", str(BUILD / "pyinstaller"), "--specpath", str(BUILD),
         "--add-data", f"{ROOT / 'todolist' / 'web'}{sep}todolist/web",
+        "--add-data", f"{ROOT / 'todolist' / 'data'}{sep}todolist/data",
         "--add-data", f"{calendar_doc}{sep}googleapiclient/discovery_cache/documents",
         "--hidden-import", "pystray._win32",
         "--additional-hooks-dir", str(ROOT / "packaging" / "hooks"),

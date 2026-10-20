@@ -143,9 +143,8 @@ class Weather:
         self.error: str | None = None
         self._daily: tuple[tuple[str, str], tuple[int, int], list[dict]] | None = None  # cache per run+grid
 
-    def refresh(self, key: str, lat: float, lon: float, now: datetime | None = None) -> None:
+    def refresh(self, key: str, grid: tuple[int, int], now: datetime | None = None) -> None:
         now = now or datetime.now()
-        grid = latlon_to_grid(lat, lon)
         try:
             ncst = fetch("getUltraSrtNcst", key, ncst_base(now), grid)
             fcst = fetch("getVilageFcst", key, fcst_base(now), grid)

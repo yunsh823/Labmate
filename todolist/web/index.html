@@ -92,17 +92,19 @@
             <div class="setting-label" data-i18n="kmaKey"></div>
             <div class="setting-desc" data-i18n="kmaKeyDesc"></div>
           </div>
-          <input class="text-input" id="set-kma-key" type="password" autocomplete="off">
+          <div class="setting-actions">
+            <input class="text-input" id="set-kma-key" type="password" autocomplete="off">
+            <button class="btn" id="kma-key-save" data-i18n="save"></button>
+          </div>
         </div>
         <div class="setting">
           <div>
             <div class="setting-label" data-i18n="location"></div>
             <div class="setting-desc" id="weather-desc"></div>
           </div>
-          <div class="setting-actions">
-            <input class="text-input small" id="set-lat" data-i18n-ph="lat" inputmode="decimal">
-            <input class="text-input small" id="set-lon" data-i18n-ph="lon" inputmode="decimal">
-            <button class="btn primary" id="weather-save" data-i18n="save"></button>
+          <div class="place-search">
+            <input class="text-input" id="place-input" data-i18n-ph="placeSearch" autocomplete="off">
+            <div class="place-results" id="place-results" hidden></div>
           </div>
         </div>
 

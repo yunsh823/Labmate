@@ -67,16 +67,25 @@ def test_fonts_lists_system_families(api):
     assert fonts and not any(f.startswith("@") for f in fonts)
 
 
-def test_weather_settings_hide_key_and_validate(api, monkeypatch):
-    monkeypatch.setattr(api._weather, "refresh", lambda *a, **k: None)  # no network in tests
-    st = api.set_weather("abc123", "37.5665", "126.9780")
-    assert st["has_key"] and st["grid"] == (60, 127) and "abc123" not in str(st)
+def test_weather_place_and_key(api, monkeypatch):
+    calls = []
+    monkeypatch.setattr(api._weather, "refresh", lambda key, grid: calls.append(grid))  # no network
+    st = api.set_weather_key("abc123")
+    assert st["has_key"] and "abc123" not in str(st) and calls == []  # no place yet -> no fetch
+    found = api.search_places("대구 동구 신천3")
+    assert found["total"] == 1
+    st = api.set_weather_place(found["results"][0]["id"])
+    assert st["place"] == "대구 동구 신천3동" and st["grid"] == (89, 91) and calls == [(89, 91)]
     assert "abc123" not in str(api.state("today"))
-    api.set_weather("", "33.4996", "126.5312")  # blank key keeps the saved one
-    assert api._weather_config()[0] == "abc123"
-    for bad in [("abc", "51.5", "-0.1"), ("a b", "37.5", "127.0")]:
+    for bad in ["", "a b"]:
         with pytest.raises(ValueError):
-            api.set_weather(*bad)
+            api.set_weather_key(bad)
+
+
+def test_weather_location_from_earlier_version_still_works(api):
+    api._store.set_setting("weather_lat", "37.5665")
+    api._store.set_setting("weather_lon", "126.9780")
+    assert api.weather_settings()["grid"] == (60, 127)
 
 
 def test_internal_attributes_hidden_from_js(api):

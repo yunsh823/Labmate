@@ -255,7 +255,18 @@ ul { list-style: none; margin: 0; padding: 0; }
   padding: 6px 10px; outline: 0; width: 240px;
 }
 .text-input:focus { border-color: var(--accent); }
-.text-input.small { width: 92px; }
+.place-search { position: relative; }
+.place-results {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 10; width: 300px; max-height: 300px;
+  overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); padding: 4px;
+}
+.place-results button {
+  display: block; width: 100%; text-align: left; border: 0; background: none;
+  padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 13.5px;
+}
+.place-results button:hover, .place-results button.active { background: var(--hover); }
+.place-results .more { font-size: 12px; color: var(--text-3); padding: 6px 10px; }
 .kbd {
   font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 6px;
   border: 1px solid var(--line); background: var(--field); white-space: nowrap;
