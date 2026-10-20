@@ -52,3 +52,27 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 
 [Run]
 Filename: "{app}\ToDoList.exe"; Description: "{cm:LaunchProgram,ToDoList}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+// The app hides to the tray instead of quitting on a close request, so Windows'
+// "close running apps" can't stop it. End it outright before files are replaced or
+// removed; every change is already saved to the database, so nothing is lost.
+procedure EndRunningApp();
+var
+  ResultCode: Integer;
+begin
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM ToDoList.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(500);
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  EndRunningApp();
+  Result := '';
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usUninstall then
+    EndRunningApp();
+end;
