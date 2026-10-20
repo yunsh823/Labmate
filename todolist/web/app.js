@@ -51,6 +51,8 @@ const STRINGS = {
     openMain: "전체 창 열기",
     general: "일반", theme: "테마", themeSystem: "시스템", themeLight: "라이트", themeDark: "다크",
     language: "언어", font: "글꼴", fontDefault: "기본 (Pretendard)",
+    autostart: "Windows 시작 시 자동 실행", on: "켜기", off: "끄기",
+    autostartDesc: "로그인하면 트레이에서 바로 시작", autostartDev: "설치한 앱에서만 쓸 수 있어요",
     events: "일정", allDay: "종일",
     weather: "날씨", kmaKey: "기상청 API 키", kmaKeyDesc: "기상청 API 허브에서 발급한 인증키",
     kmaKeySaved: "저장됨 · 바꾸려면 새 키 입력", location: "위치", lat: "위도", lon: "경도", save: "저장",
@@ -91,6 +93,8 @@ const STRINGS = {
     openMain: "Open full window",
     general: "General", theme: "Theme", themeSystem: "System", themeLight: "Light", themeDark: "Dark",
     language: "Language", font: "Font", fontDefault: "Default (Pretendard)",
+    autostart: "Start with Windows", on: "On", off: "Off",
+    autostartDesc: "Start in the tray when you sign in", autostartDev: "Available in the installed app",
     events: "Events", allDay: "All day",
     weather: "Weather", kmaKey: "KMA API key", kmaKeyDesc: "Auth key issued by the KMA API Hub",
     kmaKeySaved: "Saved · enter a new key to replace it", location: "Location", lat: "Lat", lon: "Lon", save: "Save",
@@ -377,10 +381,19 @@ async function renderSettings() {
     `<button data-value="${v}" aria-pressed="${v === S.data.settings.remind}">${v === "off" ? T.remindOff : T.minutes(v)}</button>`).join("");
   renderWeatherSettings(await api().weather_settings());
   const info = await api().app_info();
+  renderAutostart(info);
   $("hotkey-desc").textContent = info.hotkey_ok ? T.hotkeyDesc : T.hotkeyBusy;
   $("hotkey-desc").classList.toggle("setting-error", !info.hotkey_ok);
   $("hotkey-key").textContent = info.hotkey;
   renderGcal(await api().gcal_status());
+}
+
+function renderAutostart(info) {
+  $("autostart-desc").textContent = info.autostart_supported ? T.autostartDesc : T.autostartDev;
+  $("set-autostart").querySelectorAll("button").forEach(b => {
+    b.disabled = !info.autostart_supported;
+    b.setAttribute("aria-pressed", (b.dataset.value === "on") === info.autostart);
+  });
 }
 
 function renderWeatherSettings(st, failed = false) {
@@ -427,6 +440,10 @@ function bindSettings() {
     if (b) setSetting("lang", b.dataset.value).then(render);
   });
   $("set-font").addEventListener("change", e => setSetting("font", e.target.value));
+  $("set-autostart").addEventListener("click", async e => {
+    const b = e.target.closest("[data-value]");
+    if (b && !b.disabled) renderAutostart(await api().set_autostart(b.dataset.value === "on"));
+  });
   $("weather-save").addEventListener("click", async () => {
     $("weather-save").disabled = true;
     try {

@@ -24,8 +24,13 @@ APP_TAG = "todolist"  # private extended property marking events this app create
 DEFAULT_DURATION = timedelta(hours=1)
 
 
+BUNDLED_CLIENT = Path(__file__).parent / "resources" / "client_secret.json"  # added by build.py, never committed
+
+
 def client_path() -> Path:
-    return data_dir() / "client_secret.json"
+    """OAuth client: one the user imported in Settings wins over the one shipped in the installer."""
+    imported = data_dir() / "client_secret.json"
+    return imported if imported.exists() or not BUNDLED_CLIENT.exists() else BUNDLED_CLIENT
 
 
 def token_path() -> Path:
@@ -173,7 +178,7 @@ class CalendarSync:
         data = json.loads(Path(src).read_text(encoding="utf-8"))
         if "installed" not in data:
             raise ValueError("not a desktop OAuth client file")
-        shutil.copyfile(src, client_path())
+        shutil.copyfile(src, data_dir() / "client_secret.json")
 
     def connected(self) -> bool:
         return token_path().exists()

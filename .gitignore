@@ -2,6 +2,7 @@
 apiKey.txt
 credentials*.json
 client_secret*.json
+todolist/resources/
 token*.json
 *.key
 

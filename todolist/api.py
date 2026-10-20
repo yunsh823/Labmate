@@ -8,6 +8,7 @@ import threading
 from dataclasses import asdict
 from datetime import date
 
+from . import autostart
 from .db import BUCKETS, VIEWS, Store, Task
 from .gcal import CalendarSync
 from .weather import Weather, latlon_to_grid
@@ -53,7 +54,14 @@ class Api:
 
     def app_info(self) -> dict:
         shell = self._shell
-        return {"hotkey": shell.HOTKEY_LABEL if shell else "", "hotkey_ok": bool(shell and shell.hotkey_ok)}
+        return {"hotkey": shell.HOTKEY_LABEL if shell else "", "hotkey_ok": bool(shell and shell.hotkey_ok),
+                "autostart_supported": autostart.supported(),
+                "autostart": autostart.supported() and autostart.is_enabled()}
+
+    def set_autostart(self, on: bool) -> dict:
+        if autostart.supported():
+            autostart.set_enabled(bool(on))
+        return self.app_info()
 
     def _sync_calendar(self) -> None:
         """One calendar sync pass; errors are kept for the Settings page, not raised."""
