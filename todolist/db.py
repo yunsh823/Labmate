@@ -107,9 +107,18 @@ class Task:
         )
 
 
+_last_stamp = datetime.min
+
+
 def _now() -> str:
-    # Microseconds so "edited after last sync" comparisons can't tie within a second.
-    return datetime.now().isoformat(timespec="microseconds")
+    """Strictly increasing timestamps: the Windows clock ticks in ~15 ms steps, and a sync
+    and an edit landing on the same tick must still compare as "edited after the sync"."""
+    global _last_stamp
+    now = datetime.now()
+    if now <= _last_stamp:
+        now = _last_stamp + timedelta(microseconds=1)
+    _last_stamp = now
+    return now.isoformat(timespec="microseconds")
 
 
 def _to_db(key, value):
