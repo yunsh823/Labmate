@@ -29,9 +29,21 @@
         <div class="weather-panel" id="weather-panel" hidden></div>
         <div class="stats" id="stats"></div>
       </header>
-      <form class="quick-add" id="quick-add" autocomplete="off">
-        <span class="icon" data-icon="plus"></span>
-        <input id="quick-input" data-i18n-aria="addTask">
+      <form class="quick-add qa-full" id="quick-add" autocomplete="off">
+        <div class="qa-line">
+          <span class="icon" data-icon="plus"></span>
+          <input id="quick-input" data-i18n-aria="addTask">
+        </div>
+        <div class="qa-opts">
+          <input type="date" class="qa-opt" id="qa-date" data-i18n-aria="dueDate">
+          <input type="time" class="qa-opt" id="qa-time" data-i18n-aria="time">
+          <select class="qa-opt" id="qa-recurrence" data-i18n-aria="repeat">
+            <option value="" data-i18n="repeat"></option><option value="daily" data-i18n="daily"></option>
+            <option value="weekly" data-i18n="weekly"></option><option value="monthly" data-i18n="monthly"></option>
+          </select>
+          <input class="qa-opt qa-project" id="qa-project" list="project-options" data-i18n-ph="project">
+          <span class="qa-hint" data-i18n="qaHint"></span>
+        </div>
       </form>
       <div class="list" id="list"></div>
       <div class="hint" id="hint"></div>

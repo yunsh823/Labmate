@@ -37,7 +37,7 @@ const STRINGS = {
   ko: {
     today: "오늘", week: "이번 주", later: "나중에", someday: "아이디어", done: "완료", trash: "휴지통", settings: "설정",
     projects: "프로젝트", noProjects: "프로젝트 없음", toggleSidebar: "사이드바 접기/펼치기",
-    overdue: "지난 마감", weekTasks: "할 일", doneToday: "오늘 완료", open: "남은 할 일", items: "항목", tasks: "할 일", ideas: "아이디어",
+    overdue: "지난 마감", weekTasks: "할 일", qaHint: "Enter로 추가", doneToday: "오늘 완료", open: "남은 할 일", items: "항목", tasks: "할 일", ideas: "아이디어",
     ph: { today: "오늘 할 일 추가", week: "이번 주 할 일 추가", later: "나중에 할 일 추가", someday: "아이디어 추가" },
     empty: {
       today: "오늘 할 일을 추가하세요", week: "이번 주에 할 일을 추가하세요", later: "나중에 할 일을 추가하세요",
@@ -111,7 +111,7 @@ const STRINGS = {
   en: {
     today: "Today", week: "This week", later: "Later", someday: "Ideas", done: "Done", trash: "Trash", settings: "Settings",
     projects: "Projects", noProjects: "No projects", toggleSidebar: "Collapse/expand sidebar",
-    overdue: "Overdue", weekTasks: "Tasks", doneToday: "Done today", open: "to do", items: "items", tasks: "tasks", ideas: "ideas",
+    overdue: "Overdue", weekTasks: "Tasks", qaHint: "Enter to add", doneToday: "Done today", open: "to do", items: "items", tasks: "tasks", ideas: "ideas",
     ph: { today: "Add a task for today", week: "Add a task for this week", later: "Add a task for later", someday: "Add an idea" },
     empty: {
       today: "Add a task for today", week: "Add a task for this week", later: "Add a task for later",
@@ -274,6 +274,7 @@ function render() {
   if (!POPUP) {
     for (const id of ["quick-add", "list", "hint"]) $(id).hidden = settings;
     $("settings").hidden = !settings;
+    $("project-options").innerHTML = S.data.projects.map(p => `<option value="${esc(p)}">`).join("");
   }
   renderHeader();
   if (settings) return renderSettings();
@@ -860,9 +861,27 @@ function bindShared() {
     const title = $("quick-input").value.trim();
     if (!title) return;
     $("quick-input").value = "";
-    await api().add(title, S.view, S.project);
+    if (POPUP) {
+      await api().add(title, S.view, S.project);
+      return load();
+    }
+    // Options under the main window's input: fill any of them before pressing Enter.
+    const opt = id => $(id).value;
+    let date = opt("qa-date");
+    const time = opt("qa-time"), recurrence = opt("qa-recurrence");
+    if (!date && (time || recurrence)) date = S.data.today;  // a time or repeat needs a day to hang on
+    const id = await api().add(title, S.view, opt("qa-project").trim() || S.project);
+    if (date) await api().update(id, { due_date: date, due_time: time, recurrence });
+    for (const f of ["qa-date", "qa-time", "qa-recurrence", "qa-project"]) $(f).value = "";
     await load();
+    $("quick-input").focus();
   });
+  if (!POPUP) {
+    // Date/time fields switch off the browser's own Enter-to-submit, so submit from any field here.
+    $("quick-add").addEventListener("keydown", e => {
+      if (e.key === "Enter" && e.target.tagName !== "SELECT") { e.preventDefault(); $("quick-add").requestSubmit(); }
+    });
+  }
   $("list").addEventListener("click", async e => {
     if (e.target.closest("[data-goto-settings]")) { S.view = "settings"; return load(); }
     const paperRow = e.target.closest(".paper");
