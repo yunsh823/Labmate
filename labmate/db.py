@@ -124,6 +124,17 @@ def _now() -> str:
     return now.isoformat(timespec="microseconds")
 
 
+WEEK_DAYS = 7  # "This week" = due within the next 7 days, today included
+
+
+def bucket_for_due(due: date | str, today: date) -> str:
+    """The view a task with this due date belongs in: Today, This week, or Later."""
+    due = date.fromisoformat(due) if isinstance(due, str) else due
+    if due <= today:
+        return "today"
+    return "week" if (due - today).days < WEEK_DAYS else "later"
+
+
 def _to_db(key, value):
     if key == "due_date" and isinstance(value, date):
         return value.isoformat()
@@ -153,6 +164,8 @@ class Store:
     def add(self, title: str, bucket: str = "today", **fields) -> int:
         fields = {"title": title.strip(), "bucket": bucket, **fields}
         self._check(fields)
+        if fields.get("due_date"):  # a dated task lives where its date puts it
+            fields["bucket"] = bucket_for_due(fields["due_date"], date.today())
         now = _now()
         fields.update(created_at=now, updated_at=now)
         cols = ", ".join(fields)
@@ -172,6 +185,8 @@ class Store:
 
     def update(self, task_id: int, **fields) -> None:
         self._check(fields)
+        if fields.get("due_date"):  # keep the stored bucket in step, so clearing the date later leaves it there
+            fields["bucket"] = bucket_for_due(fields["due_date"], date.today())
         fields["updated_at"] = _now()
         sets = ", ".join(f"{k} = ?" for k in fields)
         self.conn.execute(
@@ -188,9 +203,7 @@ class Store:
             due = next_due(task.due_date or today, task.recurrence)
             while due <= today:  # catch up an overdue series, keeping its weekday/day
                 due = next_due(due, task.recurrence)
-            # Leave the Today bucket; the due date pulls it back into Today when it arrives.
-            bucket = "week" if (due - today).days <= 7 else "later"
-            self.update(task_id, due_date=due, bucket=bucket)
+            self.update(task_id, due_date=due)  # the new date moves it out of Today
             return
         self.conn.execute(
             "UPDATE tasks SET done = ?, completed_at = ?, updated_at = ? WHERE id = ?",
@@ -225,18 +238,20 @@ class Store:
     def list_view(self, view: str, project: str | None = None, today: date | None = None) -> list[Task]:
         """Tasks for a sidebar view.
 
-        Today = Today bucket + anything due today or overdue + items finished today.
-        Other buckets exclude what Today already shows, so a task appears in one view.
+        A dated task shows where its date puts it (due today or overdue -> Today, within the next
+        7 days -> This week, later -> Later), so it moves along by itself as the date comes closer.
+        An undated task shows in its own bucket. Today also lists items finished today.
         """
-        today_s = (today or date.today()).isoformat()
+        today = today or date.today()
         alive = "deleted_at IS NULL"
-        due_now = "(due_date IS NOT NULL AND due_date <= :today)"
+        view_of = ("(CASE WHEN due_date IS NULL THEN bucket WHEN due_date <= :today THEN 'today'"
+                   " WHEN due_date <= :week_end THEN 'week' ELSE 'later' END)")
         if view == "today":
-            where = (f"{alive} AND ((done = 0 AND (bucket = 'today' OR {due_now}))"
+            where = (f"{alive} AND ((done = 0 AND {view_of} = 'today')"
                      " OR (done = 1 AND substr(completed_at, 1, 10) = :today))")
             order = "done, due_date IS NULL, due_date, due_time IS NULL, due_time, id"
         elif view in BUCKETS:
-            where = f"{alive} AND done = 0 AND bucket = :view AND NOT {due_now}"
+            where = f"{alive} AND done = 0 AND {view_of} = :view"
             order = "due_date IS NULL, due_date, due_time IS NULL, due_time, id"
         elif view == "done":
             where = f"{alive} AND done = 1"
@@ -250,7 +265,8 @@ class Store:
             where += " AND project = :project"
         rows = self.conn.execute(
             f"SELECT * FROM tasks WHERE {where} ORDER BY {order}",
-            {"today": today_s, "view": view, "project": project},
+            {"today": today.isoformat(), "week_end": (today + timedelta(days=WEEK_DAYS - 1)).isoformat(),
+             "view": view, "project": project},
         ).fetchall()
         return [Task.from_row(r) for r in rows]
 

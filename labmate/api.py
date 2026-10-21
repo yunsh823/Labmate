@@ -12,7 +12,7 @@ from dataclasses import asdict
 from datetime import date, datetime, timedelta
 
 from . import __version__, autostart, updater
-from .db import BUCKETS, VIEWS, Store, Task
+from .db import BUCKETS, VIEWS, Store, Task, bucket_for_due
 from .gcal import CalendarSync
 from . import papers, places
 from .weather import Weather, latlon_to_grid
@@ -39,6 +39,8 @@ CAL_COLORS = ("#d50000", "#f4511e", "#f6bf26", "#33b679", "#039be5", "#3f51b5", 
 def _task_dict(t: Task) -> dict:
     d = asdict(t)
     d["due_date"] = t.due_date.isoformat() if t.due_date else None
+    if t.due_date and not t.done:
+        d["bucket"] = bucket_for_due(t.due_date, date.today())  # the view it shows in today
     return d
 
 

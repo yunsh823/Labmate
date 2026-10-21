@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from labmate import db
-from labmate.db import Store, next_due
+from labmate.db import Store, bucket_for_due, next_due
 
 TODAY = date(2026, 10, 19)  # Monday
 
@@ -21,7 +21,7 @@ def test_add_and_get(store):
     tid = store.add("  Fix Fig. 3  ", project="Paper A", due_date=date(2026, 10, 25))
     t = store.get(tid)
     assert t.title == "Fix Fig. 3"
-    assert t.bucket == "today"
+    assert t.bucket == bucket_for_due(date(2026, 10, 25), date.today())  # a dated task is filed by its date
     assert t.project == "Paper A"
     assert t.due_date == date(2026, 10, 25)
 
@@ -129,3 +129,22 @@ def test_data_dir_moves_old_folder(tmp_path, monkeypatch):
     assert db.data_dir() == tmp_path / "Labmate"
     assert (tmp_path / "Labmate" / "todo.db").read_text() == "x"
     assert not (tmp_path / "ToDoList").exists()
+
+
+def test_bucket_for_due():
+    assert [bucket_for_due(TODAY + timedelta(days=n), TODAY) for n in (-2, 0, 1, 6, 7, 30)] ==         ["today", "today", "week", "week", "later", "later"]
+
+
+def test_dated_tasks_follow_their_date(store):
+    a = store.add("Due today", bucket="later", due_date=TODAY)
+    b = store.add("In 3 days", bucket="today", due_date=TODAY + timedelta(days=3))
+    c = store.add("In 6 days", due_date=TODAY + timedelta(days=6))
+    d = store.add("In 7 days", bucket="week", due_date=TODAY + timedelta(days=7))
+    e = store.add("Undated idea", bucket="someday")
+    assert ids(store.list_view("today", today=TODAY)) == [a]
+    assert ids(store.list_view("week", today=TODAY)) == [b, c]
+    assert ids(store.list_view("later", today=TODAY)) == [d]
+    assert ids(store.list_view("someday", today=TODAY)) == [e]
+    # As the days pass, the Later task comes into This week and then into Today.
+    assert d in ids(store.list_view("week", today=TODAY + timedelta(days=1)))
+    assert d in ids(store.list_view("today", today=TODAY + timedelta(days=7)))

@@ -49,7 +49,7 @@ const STRINGS = {
     due: "마감", dueDate: "마감일", time: "시간", repeat: "반복", notes: "메모", moveToTrash: "휴지통으로",
     daily: "매일", weekly: "매주", monthly: "매월", restore: "복원", purge: "영구 삭제", complete: "완료",
     confirmPurge: "이 항목을 영구 삭제할까요? 되돌릴 수 없습니다.", ok: "확인", cancel: "취소",
-    confirmClearDue: "마감일이 오늘이거나 지나서 '오늘'에 계속 표시됩니다.\n마감일을 지우고 이동할까요?",
+    confirmClearDue: b => `마감일에 맞춰 '${b}'에 표시되는 할 일이에요.\n마감일을 지우고 옮길까요?`,
     openMain: "전체 창 열기",
     general: "일반", theme: "테마", themeSystem: "시스템", themeLight: "라이트", themeDark: "다크",
     language: "언어", font: "글꼴", fontDefault: "기본 (Pretendard)",
@@ -123,7 +123,7 @@ const STRINGS = {
     due: "Due", dueDate: "Due date", time: "Time", repeat: "Repeat", notes: "Notes", moveToTrash: "Move to trash",
     daily: "Daily", weekly: "Weekly", monthly: "Monthly", restore: "Restore", purge: "Delete forever", complete: "Complete",
     confirmPurge: "Delete this item forever? This can't be undone.", ok: "OK", cancel: "Cancel",
-    confirmClearDue: "This task is due today or earlier, so it stays in Today.\nClear the due date and move it?",
+    confirmClearDue: b => `Its due date keeps this task in ${b}.\nClear the due date and move it?`,
     openMain: "Open full window",
     general: "General", theme: "Theme", themeSystem: "System", themeLight: "Light", themeDark: "Dark",
     language: "Language", font: "Font", fontDefault: "Default (Pretendard)",
@@ -827,12 +827,12 @@ function bindDetail() {
   $("f-title").addEventListener("keydown", e => { if (e.key === "Enter") e.target.blur(); });
   $("f-bucket").addEventListener("change", async e => {
     const t = S.data.tasks.find(x => x.id === S.selected);
-    const fields = { bucket: e.target.value };
-    // A due date of today or earlier keeps the task in Today regardless of bucket.
-    if (e.target.value !== "today" && t.due_date && daysUntil(t.due_date) <= 0 && await ask(T.confirmClearDue)) {
-      fields.due_date = "";
+    // A dated task shows where its date puts it (t.bucket); another bucket only makes sense without the date.
+    if (t.due_date && e.target.value !== t.bucket) {
+      if (!await ask(T.confirmClearDue(T[t.bucket]))) { e.target.value = t.bucket; return; }
+      return save({ bucket: e.target.value, due_date: "" });
     }
-    save(fields);
+    save({ bucket: e.target.value });
   });
   $("f-project").addEventListener("change", e => save({ project: e.target.value.trim() }));
   $("f-date").addEventListener("change", e => {

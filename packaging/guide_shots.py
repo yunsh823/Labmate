@@ -48,7 +48,16 @@ MOCK = r"""
     task({ title: "Fig. 3 컬러바 수정", project: "논문A", due_date: day(3) }),
     task({ title: "ERA5 다운로드 스크립트 점검", project: "논문B" }),
     task({ title: "메일 회신", done: true, completed_at: iso(now) }),
+    task({ title: "학회 발표 초록 제출", due_date: day(20), bucket: "later" }),
+    task({ title: "블로킹 지수 비교 아이디어", bucket: "someday" }),
   ];
+  // Same filing rule as the app: a dated task shows where its date puts it.
+  const viewOf = t => !t.due_date ? t.bucket : t.due_date <= iso(now) ? "today" : t.due_date <= day(6) ? "week" : "later";
+  const inView = (t, v) => v === "today" ? (t.done ? t.completed_at === iso(now) : viewOf(t) === "today")
+    : v === "done" ? t.done : !t.done && viewOf(t) === v;
+  const shown = v => tasks.filter(t => inView(t, v)).map(t => ({ ...t, bucket: t.due_date && !t.done ? viewOf(t) : t.bucket }));
+  const counts = () => ({ ...Object.fromEntries(["today", "week", "later", "someday", "done"].map(
+    v => [v, shown(v).filter(t => v === "done" || !t.done).length])), trash: 0, papers: 2 });
   const hours = [["14", 21, "partly", "none", 20], ["15", 22, "partly", "none", 20], ["16", 21, "cloudy", "none", 30],
                  ["17", 20, "cloudy", "rain", 60], ["18", 18, "cloudy", "rain", 70], ["19", 17, "partly", "none", 30]]
     .map(([t, temp, sky, pty, pop]) => ({ time: t + ":00", temp, sky, pty, pop, night: +t >= 19 }));
@@ -72,9 +81,9 @@ MOCK = r"""
                      remind: "10", papers_enabled: "on", papers_preprints: "off" };
   const ok = v => Promise.resolve(v);
   window.pywebview = { api: {
-    state: () => ok({ today: iso(now), settings: { ...settings }, tasks, events, gcal_reauth: false,
+    state: view => ok({ today: iso(now), settings: { ...settings }, tasks: shown(view), events, gcal_reauth: false,
       weather: { temp: 21, sky: "partly", pty: "none", night: false, tmin: 14, tmax: 22, pop_max: 70, hourly: hours, updated: "14:00" },
-      counts: { today: 4, week: 0, later: 2, someday: 1, done: 1, trash: 0, papers: 2 }, projects: ["논문A", "논문B"] }),
+      counts: counts(), projects: ["논문A", "논문B"] }),
     fonts: () => ok(["Malgun Gothic"]),
     app_info: () => ok({ hotkey: "Ctrl + Alt + T", hotkey_ok: true, autostart_supported: true, autostart: true }),
     gcal_status: () => ok({ has_client: true, connected: false, account: null, last_sync: null, error: null, needs_reauth: false }),
