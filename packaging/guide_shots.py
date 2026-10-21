@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-WEB = ROOT / "todolist" / "web"
+WEB = ROOT / "labmate" / "web"
 OUT = ROOT / "docs" / "images"
 EDGE = Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe")
 SCENES = {  # file name -> scene id understood by the mock below

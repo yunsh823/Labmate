@@ -11,7 +11,7 @@ import threading
 from typing import Callable
 
 PORT = 47391
-REQUEST, REPLY = b"todolist:show\n", b"todolist:ok\n"
+REQUEST, REPLY = b"labmate:show\n", b"labmate:ok\n"
 
 
 def acquire(on_show: Callable[[], None], port: int = PORT) -> bool:

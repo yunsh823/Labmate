@@ -2,7 +2,7 @@
 apiKey.txt
 credentials*.json
 client_secret*.json
-todolist/resources/
+labmate/resources/
 token*.json
 *.key
 

@@ -1,4 +1,4 @@
-from todolist import places
+from labmate import places
 
 
 def names(query, limit=5000):

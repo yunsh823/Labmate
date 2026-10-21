@@ -61,7 +61,10 @@ def data_dir() -> Path:
         base = Path.home() / "Library" / "Application Support"
     else:
         base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
-    path = base / "ToDoList"
+    path = base / "Labmate"
+    old = base / "ToDoList"  # the app's name before 1.0
+    if not path.exists() and old.exists():
+        old.rename(path)
     path.mkdir(parents=True, exist_ok=True)
     return path
 

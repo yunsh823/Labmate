@@ -5,8 +5,8 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from todolist.db import Store
-from todolist.gcal import APP_TAG, CalendarSync, event_body
+from labmate.db import Store
+from labmate.gcal import APP_TAG, CalendarSync, event_body
 
 
 class FakeCalendar:

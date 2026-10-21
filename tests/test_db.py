@@ -2,7 +2,8 @@ from datetime import date, datetime, timedelta
 
 import pytest
 
-from todolist.db import Store, next_due
+from labmate import db
+from labmate.db import Store, next_due
 
 TODAY = date(2026, 10, 19)  # Monday
 
@@ -118,3 +119,13 @@ def test_project_filter_and_list(store):
     store.add("c")
     assert ids(store.list_view("today", project="Paper A", today=TODAY)) == [a]
     assert store.projects() == ["Paper A", "Paper B"]
+
+
+def test_data_dir_moves_old_folder(tmp_path, monkeypatch):
+    monkeypatch.setattr(db.sys, "platform", "win32")
+    monkeypatch.setenv("APPDATA", str(tmp_path))
+    (tmp_path / "ToDoList").mkdir()
+    (tmp_path / "ToDoList" / "todo.db").write_text("x")
+    assert db.data_dir() == tmp_path / "Labmate"
+    assert (tmp_path / "Labmate" / "todo.db").read_text() == "x"
+    assert not (tmp_path / "ToDoList").exists()

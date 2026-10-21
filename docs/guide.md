@@ -1,4 +1,4 @@
-# ToDoList 설정 가이드
+# Labmate 설정 가이드
 
 설치를 마친 뒤 처음 한 번만 하면 되는 설정입니다. 모든 설정은 앱 왼쪽 아래 **⚙ 설정**에 있습니다.
 
@@ -16,7 +16,7 @@
 
 ![설정의 구글 캘린더 연결 버튼](images/app-01-gcal-connect.png)
 
-**② "Google에서 확인하지 않은 앱" 화면이 나오면 고급 → ToDoList(으)로 이동**을 누릅니다.
+**② "Google에서 확인하지 않은 앱" 화면이 나오면 고급 → Labmate(으)로 이동**을 누릅니다.
 개인이 만든 앱이라 구글의 별도 검증을 받지 않아서 나오는 안내입니다.
 
 ![확인되지 않은 앱 안내 화면](images/google-01-unverified.png)
@@ -27,7 +27,7 @@
 
 **④ 브라우저에 "connected" 안내가 뜨면 탭을 닫습니다.** 앱 설정에 "연결됨"과 마지막 동기화 시각이 표시되면 완료입니다.
 
-> 연결을 끊으려면 설정에서 **연결 해제**를 누르세요. 구글 계정 쪽 권한까지 지우려면 [Google 계정의 서드 파티 연결](https://myaccount.google.com/connections)에서 ToDoList를 삭제하면 됩니다.
+> 연결을 끊으려면 설정에서 **연결 해제**를 누르세요. 구글 계정 쪽 권한까지 지우려면 [Google 계정의 서드 파티 연결](https://myaccount.google.com/connections)에서 Labmate를 삭제하면 됩니다.
 
 ---
 

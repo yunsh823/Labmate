@@ -20,7 +20,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",  # list calendars and their events
     "https://www.googleapis.com/auth/calendar.events",    # create/update/delete our events
 ]
-APP_TAG = "todolist"  # private extended property marking events this app created
+APP_TAG = "todolist"  # private extended property marking events this app created (old app name, kept so existing events still match)
 DEFAULT_DURATION = timedelta(hours=1)
 
 
@@ -188,7 +188,7 @@ class CalendarSync:
         from google_auth_oauthlib.flow import InstalledAppFlow
         flow = InstalledAppFlow.from_client_secrets_file(str(client_path()), SCOPES)
         creds = flow.run_local_server(port=0, open_browser=True, timeout_seconds=180,
-                                      success_message="ToDoList: Google Calendar connected. You can close this tab.")
+                                      success_message="Labmate: Google Calendar connected. You can close this tab.")
         token_path().write_text(creds.to_json(), encoding="utf-8")
         self._client = None
         self.needs_reauth = False

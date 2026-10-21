@@ -1,4 +1,4 @@
-"""Regenerate todolist/data/kma_places.json from KMA's grid/lat-lon spreadsheet.
+"""Regenerate labmate/data/kma_places.json from KMA's grid/lat-lon spreadsheet.
 
 The spreadsheet ships inside the "오픈API활용가이드" zip on the data.go.kr page for
 기상청_단기예보 조회서비스 (data 15084084). Run when KMA publishes a new version:
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import openpyxl
 
-OUT = Path(__file__).resolve().parent.parent / "todolist" / "data" / "kma_places.json"
+OUT = Path(__file__).resolve().parent.parent / "labmate" / "data" / "kma_places.json"
 
 
 def main(xlsx: str) -> None:

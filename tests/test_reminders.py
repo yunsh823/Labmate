@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 
-from todolist.db import Task
-from todolist.reminders import due_reminders
+from labmate.db import Task
+from labmate.reminders import due_reminders
 
 NOW = datetime(2026, 10, 19, 13, 52)
 LEAD = timedelta(minutes=10)

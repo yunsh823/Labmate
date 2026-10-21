@@ -2,8 +2,8 @@ from datetime import date
 
 import pytest
 
-from todolist import papers
-from todolist.db import Store
+from labmate import papers
+from labmate.db import Store
 
 TODAY = date(2026, 10, 20)
 

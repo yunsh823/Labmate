@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from todolist.weather import daily_base, fcst_base, latlon_to_grid, ncst_base, summarize
+from labmate.weather import daily_base, fcst_base, latlon_to_grid, ncst_base, summarize
 
 
 def test_grid_matches_kma_reference_points():

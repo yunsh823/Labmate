@@ -19,7 +19,7 @@ from datetime import date, timedelta
 
 S2_RECOMMEND = "https://api.semanticscholar.org/recommendations/v1/papers"
 OPENALEX = "https://api.openalex.org"
-USER_AGENT = "ToDoList desktop app (paper alerts)"
+USER_AGENT = "Labmate desktop app (paper alerts)"
 WINDOW_DAYS = 7
 DAILY_CAP = 15
 PREPRINT_VENUES = ("arxiv", "biorxiv", "medrxiv", "research square", "ssrn", "essoar", "ess open archive",

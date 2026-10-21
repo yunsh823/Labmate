@@ -1,6 +1,6 @@
-; Inno Setup script for the ToDoList installer. build.py compiles it after PyInstaller:
-;   ISCC.exe /DAppVersion=0.1.0 packaging\ToDoList.iss
-; Per-user install (no admin rights). Uninstall keeps the user's data in %APPDATA%\ToDoList.
+; Inno Setup script for the Labmate installer. build.py compiles it after PyInstaller:
+;   ISCC.exe /DAppVersion=0.1.0 packaging\Labmate.iss
+; Per-user install (no admin rights). Uninstall keeps the user's data in %APPDATA%\Labmate.
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -8,17 +8,17 @@
 
 [Setup]
 AppId={{6F2C8B1E-4D3A-4E7B-9C51-2A8D0F3B7E64}
-AppName=ToDoList
+AppName=Labmate
 AppVersion={#AppVersion}
 AppPublisher=SanghyeonYun
-DefaultDirName={localappdata}\Programs\ToDoList
+DefaultDirName={localappdata}\Programs\Labmate
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=..\dist
-OutputBaseFilename=ToDoList-Setup-{#AppVersion}
+OutputBaseFilename=Labmate-Setup-{#AppVersion}
 SetupIconFile=..\build\app.ico
-UninstallDisplayIcon={app}\ToDoList.exe
-UninstallDisplayName=ToDoList
+UninstallDisplayIcon={app}\Labmate.exe
+UninstallDisplayName=Labmate
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -40,18 +40,18 @@ Name: "autostart"; Description: "{cm:AutoStart}"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "..\dist\ToDoList\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\Labmate\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\ToDoList"; Filename: "{app}\ToDoList.exe"
-Name: "{autodesktop}\ToDoList"; Filename: "{app}\ToDoList.exe"; Tasks: desktopicon
+Name: "{autoprograms}\Labmate"; Filename: "{app}\Labmate.exe"
+Name: "{autodesktop}\Labmate"; Filename: "{app}\Labmate.exe"; Tasks: desktopicon
 
 [Registry]
-; Same entry the app's Settings toggle writes (todolist/autostart.py).
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "ToDoList"; ValueData: """{app}\ToDoList.exe"""; Flags: uninsdeletevalue; Tasks: autostart
+; Same entry the app's Settings toggle writes (labmate/autostart.py).
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Labmate"; ValueData: """{app}\Labmate.exe"""; Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
-Filename: "{app}\ToDoList.exe"; Description: "{cm:LaunchProgram,ToDoList}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Labmate.exe"; Description: "{cm:LaunchProgram,Labmate}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 // The app hides to the tray instead of quitting on a close request, so Windows'
@@ -61,7 +61,7 @@ procedure EndRunningApp();
 var
   ResultCode: Integer;
 begin
-  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM ToDoList.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM Labmate.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Sleep(500);
 end;
 

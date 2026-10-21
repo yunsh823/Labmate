@@ -1,6 +1,6 @@
-# ToDoList
+# Labmate
 
-대학원생을 위한 가벼운 Windows 할 일 앱입니다. 할 일 관리를 중심으로 구글 캘린더 연동, 기상청 동네예보, 매일 아침 받아 보는 새 논문 알림을 함께 담았습니다.
+연구자를 위한 가벼운 Windows 투두리스트입니다. 할 일 관리를 중심으로 구글 캘린더 연동, 기상청 동네예보, 매일 아침 받아 보는 새 논문 알림을 함께 담았습니다.
 
 모든 데이터는 내 컴퓨터에만 저장됩니다. 자세한 내용은 [개인정보처리방침](docs/privacy.md)을 참고하세요.
 
@@ -35,7 +35,7 @@
 
 ## 설치
 
-1. [Releases](../../releases) 페이지에서 `ToDoList-Setup-<버전>.exe`를 내려받아 실행합니다.
+1. [Releases](../../releases) 페이지에서 `Labmate-Setup-<버전>.exe`를 내려받아 실행합니다.
    - 관리자 권한 없이 사용자 폴더에 설치됩니다.
    - 코드 서명이 없는 프로그램이라 처음 실행할 때 "Windows의 PC 보호" 창이 뜰 수 있습니다. **추가 정보 → 실행**을 누르세요.
 2. 설치가 끝나면 작업표시줄 오른쪽 트레이에 아이콘이 생깁니다. 처음에는 `^` 안에 숨겨져 있을 수 있으니, 아이콘을 작업표시줄로 끌어다 놓으면 항상 보입니다.
@@ -49,7 +49,7 @@
 ### 구글 캘린더
 1. 설정 → 구글 캘린더 → **연결**을 누르면 브라우저가 열립니다.
 2. 구글 계정으로 로그인하고 권한을 허용합니다.
-   - "Google에서 확인하지 않은 앱" 화면이 나오면 **고급 → ToDoList(으)로 이동**을 누르세요.
+   - "Google에서 확인하지 않은 앱" 화면이 나오면 **고급 → Labmate(으)로 이동**을 누르세요.
 
 ### 날씨
 1. [기상청 API 허브](https://apihub.kma.go.kr)에 가입하고 인증키를 발급받습니다.
@@ -65,7 +65,7 @@
 
 ## 데이터
 
-- 저장 위치: `%APPDATA%\ToDoList\` (할 일과 설정은 `todo.db` 파일 하나에 들어 있습니다)
+- 저장 위치: `%APPDATA%\Labmate\` (할 일과 설정은 `todo.db` 파일 하나에 들어 있습니다)
 - 백업: 이 폴더를 복사해 두면 됩니다.
 - 앱을 삭제해도 데이터는 남습니다. 완전히 지우려면 이 폴더를 삭제하세요.
 
@@ -77,25 +77,25 @@ Python 3.12 기준입니다.
 conda create -n todo -c conda-forge python=3.12
 conda activate todo
 pip install -r requirements.txt
-python -m todolist          # 실행
+python -m labmate          # 실행
 python -m pytest            # 테스트
 python build.py             # dist/ 에 exe와 설치 파일 생성 (설치 파일은 Inno Setup 6 필요)
 ```
 
-- 구조: `todolist/db.py`(저장소), `api.py`(화면과 Python 사이의 연결), `desktop.py`(창·트레이·알림), `gcal.py`(구글 캘린더), `weather.py`·`places.py`(날씨·동네 검색), `papers.py`(논문 알림), `web/`(화면 HTML·CSS·JS)
+- 구조: `labmate/db.py`(저장소), `api.py`(화면과 Python 사이의 연결), `desktop.py`(창·트레이·알림), `gcal.py`(구글 캘린더), `weather.py`·`places.py`(날씨·동네 검색), `papers.py`(논문 알림), `web/`(화면 HTML·CSS·JS)
 - 기상청 동네 목록 갱신: 공공데이터포털 "기상청_단기예보 조회서비스" 활용가이드의 `격자_위경도` 엑셀 파일로 `python packaging/make_places.py <엑셀 파일>`을 실행합니다.
-- 구글 캘린더를 쓰려면 Google Cloud에서 "데스크톱 앱" OAuth 클라이언트를 만들고, 앱 설정에서 JSON 파일을 가져오세요. 그 파일이 `%APPDATA%\ToDoList\client_secret.json`에 있으면 `build.py`가 설치 파일에 함께 넣습니다(저장소에는 올라가지 않습니다).
+- 구글 캘린더를 쓰려면 Google Cloud에서 "데스크톱 앱" OAuth 클라이언트를 만들고, 앱 설정에서 JSON 파일을 가져오세요. 그 파일이 `%APPDATA%\Labmate\client_secret.json`에 있으면 `build.py`가 설치 파일에 함께 넣습니다(저장소에는 올라가지 않습니다).
 
 ## 출처와 라이선스 고지
 
 - 기상 예보: [기상청 API 허브](https://apihub.kma.go.kr) 단기예보 조회서비스
 - 동네·격자 목록: 기상청 단기예보 조회서비스 오픈API 활용가이드의 격자_위경도 자료 (공공데이터포털)
 - 논문 정보: [Semantic Scholar API](https://www.semanticscholar.org/product/api), [OpenAlex](https://openalex.org) (CC0)
-- 글꼴: [Pretendard](https://github.com/orioncactus/pretendard) © Kil Hyung-jin, SIL Open Font License 1.1 (`todolist/web/fonts/Pretendard-OFL.txt`)
+- 글꼴: [Pretendard](https://github.com/orioncactus/pretendard) © Kil Hyung-jin, SIL Open Font License 1.1 (`labmate/web/fonts/Pretendard-OFL.txt`)
 - 사용한 라이브러리: pywebview, pystray, Pillow, google-api-python-client, google-auth-oauthlib
 
 ---
 
 ## English
 
-ToDoList is a lightweight Windows to-do app for graduate students: tasks with buckets, due dates and recurrence, Google Calendar sync, Korea Meteorological Administration neighbourhood forecasts, and daily new-paper alerts from Semantic Scholar and OpenAlex. It lives in the system tray, opens a Today panel above the taskbar, and adds a task from anywhere with `Ctrl + Alt + T`. All data stays on your computer; see the [privacy policy](docs/privacy.md). Download the installer from [Releases](../../releases). The interface is available in Korean and English.
+Labmate is a lightweight Windows to-do app for researchers: tasks with buckets, due dates and recurrence, Google Calendar sync, Korea Meteorological Administration neighbourhood forecasts, and daily new-paper alerts from Semantic Scholar and OpenAlex. It lives in the system tray, opens a Today panel above the taskbar, and adds a task from anywhere with `Ctrl + Alt + T`. All data stays on your computer; see the [privacy policy](docs/privacy.md). Download the installer from [Releases](../../releases). The interface is available in Korean and English.

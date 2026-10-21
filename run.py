@@ -2,6 +2,6 @@
 
 import sys
 
-from todolist.__main__ import main
+from labmate.__main__ import main
 
 sys.exit(main())

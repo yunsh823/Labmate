@@ -1,7 +1,7 @@
 import socket
 import threading
 
-from todolist import single
+from labmate import single
 
 
 def free_port():

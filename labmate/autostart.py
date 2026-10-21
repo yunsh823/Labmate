@@ -7,7 +7,7 @@ so nothing is stored in the app's own settings.
 import sys
 
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
-VALUE = "ToDoList"
+VALUE = "Labmate"
 
 
 def supported() -> bool:

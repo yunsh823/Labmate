@@ -1,4 +1,4 @@
-# ToDoList 개인정보처리방침 / Privacy Policy
+# Labmate 개인정보처리방침 / Privacy Policy
 
 시행일: 2026년 10월 20일 · Effective: October 20, 2026
 
@@ -8,7 +8,7 @@
 
 ## 한국어
 
-ToDoList(이하 "앱")는 Windows용 개인 할 일 관리 프로그램입니다. 이 방침은 앱이 어떤 정보를 어디에 저장하고, 어떤 외부 서비스와 주고받는지 설명합니다.
+Labmate(이하 "앱")는 Windows용 개인 할 일 관리 프로그램입니다. 이 방침은 앱이 어떤 정보를 어디에 저장하고, 어떤 외부 서비스와 주고받는지 설명합니다.
 
 ### 1. 기본 원칙
 
@@ -19,7 +19,7 @@ ToDoList(이하 "앱")는 Windows용 개인 할 일 관리 프로그램입니다
 
 ### 2. 컴퓨터에 저장되는 정보
 
-모든 파일은 `%APPDATA%\ToDoList\` 폴더에 저장됩니다.
+모든 파일은 `%APPDATA%\Labmate\` 폴더에 저장됩니다.
 
 | 파일 | 내용 |
 |---|---|
@@ -43,8 +43,8 @@ ToDoList(이하 "앱")는 Windows용 개인 할 일 관리 프로그램입니다
   - 시간이 있는 할 일은 제목과 날짜·시간으로 일정을 만들고, 앱이 만든 일정임을 표시하는 값을 함께 저장합니다.
   - 앱이 만든 일정이 캘린더에서 수정되면 할 일에 반영하고, 삭제되면 해당 할 일을 휴지통으로 옮깁니다.
 - 구글에서 받은 정보는 위 기능에만 사용하며, 개발자를 포함한 누구에게도 전송·판매·공유하지 않고, 광고나 AI 모델 학습에 사용하지 않습니다.
-- ToDoList가 Google API에서 받은 정보를 사용하고 다른 앱으로 전송하는 방식은 [Google API 서비스 사용자 데이터 정책](https://developers.google.com/terms/api-services-user-data-policy)의 제한적 사용(Limited Use) 요구사항을 포함하여 해당 정책을 준수합니다.
-- 설정에서 "연결 해제"를 누르면 컴퓨터에 저장된 로그인 정보가 삭제됩니다. 구글 계정 쪽 권한까지 철회하려면 [Google 계정의 서드 파티 연결 관리](https://myaccount.google.com/connections)에서 ToDoList를 삭제하세요.
+- Labmate가 Google API에서 받은 정보를 사용하고 다른 앱으로 전송하는 방식은 [Google API 서비스 사용자 데이터 정책](https://developers.google.com/terms/api-services-user-data-policy)의 제한적 사용(Limited Use) 요구사항을 포함하여 해당 정책을 준수합니다.
+- 설정에서 "연결 해제"를 누르면 컴퓨터에 저장된 로그인 정보가 삭제됩니다. 구글 계정 쪽 권한까지 철회하려면 [Google 계정의 서드 파티 연결 관리](https://myaccount.google.com/connections)에서 Labmate를 삭제하세요.
 
 #### 3-2. 기상청 API 허브 (날씨 기능을 설정한 경우)
 
@@ -80,7 +80,7 @@ ToDoList(이하 "앱")는 Windows용 개인 할 일 관리 프로그램입니다
 
 ## English
 
-ToDoList ("the app") is a personal to-do app for Windows. This policy explains what the app stores, where it stores it, and what it exchanges with outside services.
+Labmate ("the app") is a personal to-do app for Windows. This policy explains what the app stores, where it stores it, and what it exchanges with outside services.
 
 ### 1. Principles
 
@@ -91,7 +91,7 @@ ToDoList ("the app") is a personal to-do app for Windows. This policy explains w
 
 ### 2. Data stored on your computer
 
-All files are kept in `%APPDATA%\ToDoList\`.
+All files are kept in `%APPDATA%\Labmate\`.
 
 | File | Contents |
 |---|---|
@@ -115,8 +115,8 @@ All files are kept in `%APPDATA%\ToDoList\`.
   - For a task with a time, the app creates an event with the task's title, date, and time, plus a private marker identifying it as created by the app.
   - When such an event is changed in Google Calendar, the change is applied to the task; when it is deleted, the task moves to the app's trash.
 - Data received from Google is used only for the features above. It is never transferred, sold, or shared with anyone, including the developer, and is never used for advertising or to train AI models.
-- ToDoList's use and transfer of information received from Google APIs to any other app will adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
-- "Disconnect" in Settings deletes the stored credentials. To revoke the app's access on Google's side as well, remove ToDoList at [Third-party connections in your Google Account](https://myaccount.google.com/connections).
+- Labmate's use and transfer of information received from Google APIs to any other app will adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
+- "Disconnect" in Settings deletes the stored credentials. To revoke the app's access on Google's side as well, remove Labmate at [Third-party connections in your Google Account](https://myaccount.google.com/connections).
 
 #### 3.2 KMA API Hub (only if you set up weather)
 

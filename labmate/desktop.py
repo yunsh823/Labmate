@@ -22,13 +22,13 @@ ACCENT = (79, 107, 237)
 
 TRAY_TEXT = {
     "ko": {"today": "오늘 할 일", "main": "전체 창 열기", "quit": "종료",
-           "open": "ToDoList · 오늘 남은 할 일 {n}개", "clear": "ToDoList · 오늘 할 일을 모두 끝냈어요",
+           "open": "Labmate · 오늘 남은 할 일 {n}개", "clear": "Labmate · 오늘 할 일을 모두 끝냈어요",
            "soon": "{m}분 후 시작", "soon_many": "곧 시작하는 일정 {n}개",
-           "papers": "새 논문이 도착했어요.", "papers_title": "ToDoList · 새 논문 {n}편"},
+           "papers": "새 논문이 도착했어요.", "papers_title": "Labmate · 새 논문 {n}편"},
     "en": {"today": "Today", "main": "Open full window", "quit": "Quit",
-           "open": "ToDoList · {n} left today", "clear": "ToDoList · All done for today",
+           "open": "Labmate · {n} left today", "clear": "Labmate · All done for today",
            "soon": "Starts in {m} min", "soon_many": "{n} items starting soon",
-           "papers": "New papers have arrived.", "papers_title": "ToDoList · {n} new papers"},
+           "papers": "New papers have arrived.", "papers_title": "Labmate · {n} new papers"},
 }
 
 
@@ -98,17 +98,17 @@ class Desktop:
         self._papers_retry_at = 0.0
 
         self.main = webview.create_window(
-            "ToDoList", url=str(WEB_DIR / "index.html"), js_api=self.api,
+            "Labmate", url=str(WEB_DIR / "index.html"), js_api=self.api,
             width=1080, height=720, min_size=(760, 480),
         )
         self.popup = webview.create_window(
-            "ToDoList Today", url=str(WEB_DIR / "popup.html"), js_api=self.api,
+            "Labmate Today", url=str(WEB_DIR / "popup.html"), js_api=self.api,
             width=POPUP_W, height=POPUP_H, frameless=True, easy_drag=False,
             resizable=False, on_top=True, hidden=True,
         )
         self.main.events.closing += self._on_main_closing
 
-        self.icon = pystray.Icon("ToDoList", make_icon(), "ToDoList", menu=pystray.Menu(
+        self.icon = pystray.Icon("Labmate", make_icon(), "Labmate", menu=pystray.Menu(
             # default=True: a left click on the tray icon runs this item.
             # Labels are callables so they follow the language setting.
             pystray.MenuItem(lambda item: self._text("today"), lambda icon, item: self.toggle_popup(), default=True),

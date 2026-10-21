@@ -3,8 +3,8 @@ from datetime import date
 
 import pytest
 
-from todolist.api import Api
-from todolist.db import Store
+from labmate.api import Api
+from labmate.db import Store
 
 
 @pytest.fixture
@@ -89,7 +89,7 @@ def test_weather_location_from_earlier_version_still_works(api):
 
 
 def test_paper_alert_settings(api, monkeypatch):
-    from todolist import papers
+    from labmate import papers
     monkeypatch.setattr(papers, "lookup_title", lambda doi: "Blocking and heatwaves")
     st = api.add_paper_seed("https://doi.org/10.1175/JCLI-D-17-0034.1")
     assert st["seeds"] == [{"doi": "10.1175/JCLI-D-17-0034.1", "title": "Blocking and heatwaves"}]
@@ -114,7 +114,7 @@ def test_paper_notify_text_limit(api):
 
 
 def test_fetch_and_save_paper(api, monkeypatch):
-    from todolist import papers
+    from labmate import papers
     paper = {"key": "10.1/p", "doi": "10.1/p", "title": "A paper", "first_author": "Kim", "author_count": 3,
              "venue": "GRL", "pub_date": "2026-10-18", "url": "https://doi.org/10.1/p", "preprint": 0,
              "reason_kind": "keyword", "reason_value": "blocking"}
@@ -134,7 +134,7 @@ def test_fetch_and_save_paper(api, monkeypatch):
 
 
 def test_total_fetch_failure_is_retried_not_skipped(api, monkeypatch):
-    from todolist import papers
+    from labmate import papers
     monkeypatch.setattr(papers, "fetch", lambda *a, **k: ([], "network"))
     api.add_paper_keyword("blocking")
     assert api._fetch_papers() == (0, "network")
