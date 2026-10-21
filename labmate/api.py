@@ -468,8 +468,6 @@ class Api:
 
     def check_update_now(self) -> dict:
         self._check_update()
-        if self._shell:
-            self._shell.refresh_icon()  # shows or hides the tray's update item
         return self.update_status()
 
     def install_update(self) -> dict:

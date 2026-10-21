@@ -21,20 +21,16 @@ POPUP_W, POPUP_H, MARGIN = 380, 560, 12
 ACCENT = (79, 107, 237)
 
 TRAY_TEXT = {
-    "ko": {"today": "오늘 할 일", "main": "전체 창 열기", "quit": "종료",
+    "ko": {"today": "오늘 할 일", "pin": "오늘 할 일 창 고정", "quit": "종료",
            "open": "Labmate · 오늘 남은 할 일 {n}개", "clear": "Labmate · 오늘 할 일을 모두 끝냈어요",
            "soon": "{m}분 후 시작", "soon_many": "곧 시작하는 일정 {n}개",
            "papers": "새 논문이 도착했어요.", "papers_title": "Labmate · 새 논문 {n}편",
-           "update": "업데이트 설치 (v{v})", "update_title": "Labmate · 새 버전 {v}",
-           "update_body": "트레이 메뉴나 설정에서 업데이트할 수 있어요.",
-           "update_failed": "업데이트를 받지 못했어요. 잠시 후 다시 시도해 주세요."},
-    "en": {"today": "Today", "main": "Open full window", "quit": "Quit",
+           "update_title": "Labmate · 새 버전 {v}", "update_body": "설정 → 업데이트에서 설치할 수 있어요."},
+    "en": {"today": "Today", "pin": "Pin Today panel", "quit": "Quit",
            "open": "Labmate · {n} left today", "clear": "Labmate · All done for today",
            "soon": "Starts in {m} min", "soon_many": "{n} items starting soon",
            "papers": "New papers have arrived.", "papers_title": "Labmate · {n} new papers",
-           "update": "Install update (v{v})", "update_title": "Labmate · Version {v} is out",
-           "update_body": "Update from the tray menu or Settings.",
-           "update_failed": "Couldn't download the update. Please try again later."},
+           "update_title": "Labmate · Version {v} is out", "update_body": "Install it from Settings → Updates."},
 }
 
 
@@ -89,6 +85,25 @@ def _hide_from_taskbar(window: webview.Window) -> None:
                              (style | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW)
 
 
+class TrayIcon(pystray.Icon):
+    """Tray icon that also reports a double click (Windows; elsewhere only single clicks arrive)."""
+    WM_LBUTTONUP, WM_LBUTTONDBLCLK = 0x0202, 0x0203
+
+    def __init__(self, *args, on_double_click=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._on_double_click = on_double_click
+        self._swallow_up = False
+
+    def _on_notify(self, wparam, lparam):
+        if lparam == self.WM_LBUTTONDBLCLK and self._on_double_click:
+            self._swallow_up = True  # the button-up that ends a double click must not toggle the popup again
+            self._on_double_click()
+        elif lparam == self.WM_LBUTTONUP and self._swallow_up:
+            self._swallow_up = False
+        else:
+            super()._on_notify(wparam, lparam)
+
+
 class Desktop:
     HOTKEY_LABEL = "Ctrl + Alt + T"
 
@@ -98,6 +113,7 @@ class Desktop:
         self.popup_visible = False
         self.popup_hidden_at = 0.0
         self.popup_shown_at = 0.0
+        self.pinned = False  # pinned: the popup stays up when another window is clicked
         self._sync_wakeup = threading.Event()
         self.hotkey_ok = False
         self._reminded: set[str] = set()
@@ -115,13 +131,13 @@ class Desktop:
         )
         self.main.events.closing += self._on_main_closing
 
-        self.icon = pystray.Icon("Labmate", make_icon(), "Labmate", menu=pystray.Menu(
-            # default=True: a left click on the tray icon runs this item.
+        self.icon = TrayIcon("Labmate", make_icon(), "Labmate", on_double_click=self.show_main, menu=pystray.Menu(
+            # Left click runs the hidden default item; double click opens the main window.
             # Labels are callables so they follow the language setting.
-            pystray.MenuItem(lambda item: self._text("today"), lambda icon, item: self.toggle_popup(), default=True),
-            pystray.MenuItem(lambda item: self._text("main"), lambda icon, item: self.show_main()),
-            pystray.MenuItem(lambda item: self._text("update").format(v=(self.api._update_info or {}).get("version")),
-                             lambda icon, item: self._install_update(), visible=lambda item: bool(self.api._update_info)),
+            pystray.MenuItem(lambda item: self._text("today"), lambda icon, item: self.toggle_popup(),
+                             default=True, visible=False),
+            pystray.MenuItem(lambda item: self._text("pin"), lambda icon, item: self.toggle_pin(),
+                             checked=lambda item: self.pinned),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(lambda item: self._text("quit"), lambda icon, item: self.quit()),
         ))
@@ -180,14 +196,6 @@ class Desktop:
         if info and info["version"] != self._update_notified:  # once per version per run
             self._update_notified = info["version"]
             self.icon.notify(self._text("update_body"), self._text("update_title").format(v=info["version"]))
-
-    def _install_update(self) -> None:
-        def run():
-            try:
-                self.api.install_update()
-            except Exception:
-                self.icon.notify(self._text("update_failed"), "Labmate")
-        threading.Thread(target=run, daemon=True).start()
 
     def _check_reminders(self) -> None:
         minutes = self.api._setting("remind")
@@ -258,7 +266,8 @@ class Desktop:
 
     def toggle_popup(self) -> None:
         if self.popup_visible:
-            self.hide_popup()
+            if not self.pinned:
+                self.hide_popup()
             return
         # Clicking the tray icon blurs (and hides) an open popup first; don't reopen it.
         if time.monotonic() - self.popup_hidden_at < 0.4:
@@ -271,8 +280,17 @@ class Desktop:
     def popup_blurred(self) -> None:
         # Windows may refuse focus to a just-shown window (foreground lock), which
         # blurs it immediately; ignore that so the popup doesn't vanish on open.
-        if time.monotonic() - self.popup_shown_at > 0.5:
+        if not self.pinned and time.monotonic() - self.popup_shown_at > 0.5:
             self.hide_popup()
+
+    def toggle_pin(self) -> None:
+        if self.pinned:
+            self.hide_popup()  # unpinning closes it, like clicking elsewhere would
+            return
+        if not self.popup_visible:
+            self.toggle_popup()
+        self.pinned = True
+        self.icon.update_menu()
 
     def quick_add(self) -> None:
         if not self.popup_visible:
@@ -286,11 +304,14 @@ class Desktop:
         if not self.popup_visible:
             return
         self.popup_visible = False
+        self.pinned = False  # Esc or unpinning: a hidden popup is never pinned
         self.popup_hidden_at = time.monotonic()
         self.popup.hide()
+        self.icon.update_menu()
 
     def show_main(self, task_id: int | None = None) -> None:
-        self.hide_popup()
+        if not self.pinned:
+            self.hide_popup()
         self.main.show()
         self.main.restore()
         if task_id is not None:
