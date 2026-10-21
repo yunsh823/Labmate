@@ -48,7 +48,7 @@ const STRINGS = {
     addTask: "할 일 추가", close: "닫기", title: "제목", bucket: "분류", project: "프로젝트", none: "없음",
     due: "마감", dueDate: "마감일", time: "시간", repeat: "반복", notes: "메모", moveToTrash: "휴지통으로",
     daily: "매일", weekly: "매주", monthly: "매월", restore: "복원", purge: "영구 삭제", complete: "완료",
-    confirmPurge: "이 항목을 영구 삭제할까요? 되돌릴 수 없습니다.",
+    confirmPurge: "이 항목을 영구 삭제할까요? 되돌릴 수 없습니다.", ok: "확인", cancel: "취소",
     confirmClearDue: "마감일이 오늘이거나 지나서 '오늘'에 계속 표시됩니다.\n마감일을 지우고 이동할까요?",
     openMain: "전체 창 열기",
     general: "일반", theme: "테마", themeSystem: "시스템", themeLight: "라이트", themeDark: "다크",
@@ -122,7 +122,7 @@ const STRINGS = {
     addTask: "Add task", close: "Close", title: "Title", bucket: "List", project: "Project", none: "None",
     due: "Due", dueDate: "Due date", time: "Time", repeat: "Repeat", notes: "Notes", moveToTrash: "Move to trash",
     daily: "Daily", weekly: "Weekly", monthly: "Monthly", restore: "Restore", purge: "Delete forever", complete: "Complete",
-    confirmPurge: "Delete this item forever? This can't be undone.",
+    confirmPurge: "Delete this item forever? This can't be undone.", ok: "OK", cancel: "Cancel",
     confirmClearDue: "This task is due today or earlier, so it stays in Today.\nClear the due date and move it?",
     openMain: "Open full window",
     general: "General", theme: "Theme", themeSystem: "System", themeLight: "Light", themeDark: "Dark",
@@ -201,6 +201,31 @@ const $ = id => document.getElementById(id);
 const api = () => window.pywebview.api;
 
 // --- helpers ---------------------------------------------------------------
+
+// In-app confirm. The browser's own confirm() titles itself with the local server address.
+function ask(text, okLabel = T.ok, danger = false) {
+  return new Promise(resolve => {
+    const done = ok => {
+      $("modal").hidden = true;
+      document.removeEventListener("keydown", onKey, true);
+      resolve(ok);
+    };
+    const onKey = e => {
+      if (e.key !== "Escape") return;
+      e.stopImmediatePropagation();  // Esc here cancels the dialog, not the detail panel behind it
+      done(false);
+    };
+    $("modal-text").textContent = text;
+    $("modal-ok").textContent = okLabel;
+    $("modal-ok").classList.toggle("danger", danger);
+    $("modal-ok").onclick = () => done(true);
+    $("modal-cancel").onclick = () => done(false);
+    $("modal").onclick = e => { if (e.target === $("modal")) done(false); };
+    document.addEventListener("keydown", onKey, true);
+    $("modal").hidden = false;
+    $("modal-ok").focus();
+  });
+}
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -750,7 +775,7 @@ function bindSettings() {
     const st = await api().gcal_status();
     if (act === "import") return renderGcal(await api().gcal_import_client());
     if (act === "disconnect") {
-      if (confirm(T.confirmDisconnect)) renderGcal(await api().gcal_disconnect());
+      if (await ask(T.confirmDisconnect, T.gcalDisconnect)) renderGcal(await api().gcal_disconnect());
       return;
     }
     renderGcal(st, true);
@@ -800,11 +825,11 @@ function bindDetail() {
     else e.target.value = S.data.tasks.find(t => t.id === S.selected).title;
   });
   $("f-title").addEventListener("keydown", e => { if (e.key === "Enter") e.target.blur(); });
-  $("f-bucket").addEventListener("change", e => {
+  $("f-bucket").addEventListener("change", async e => {
     const t = S.data.tasks.find(x => x.id === S.selected);
     const fields = { bucket: e.target.value };
     // A due date of today or earlier keeps the task in Today regardless of bucket.
-    if (e.target.value !== "today" && t.due_date && daysUntil(t.due_date) <= 0 && confirm(T.confirmClearDue)) {
+    if (e.target.value !== "today" && t.due_date && daysUntil(t.due_date) <= 0 && await ask(T.confirmClearDue)) {
       fields.due_date = "";
     }
     save(fields);
@@ -899,7 +924,7 @@ function bindShared() {
     }
     if (e.target.closest("[data-restore]")) { await api().restore(id); return load(); }
     if (e.target.closest("[data-purge]")) {
-      if (confirm(T.confirmPurge)) { await api().purge(id); await load(); }
+      if (await ask(T.confirmPurge, T.purge, true)) { await api().purge(id); await load(); }
       return;
     }
     if (POPUP) return api().show_main(id);
