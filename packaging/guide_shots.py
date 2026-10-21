@@ -25,7 +25,6 @@ SCENES = {  # file name -> scene id understood by the mock below
     "app-04-papers-settings.png": "papers-settings",
     "app-05-papers-tab.png": "papers",
     "feature-tasks.png": "tasks",
-    "feature-calendar.png": "calendar",
     "feature-popup.png": "popup",
 }
 POPUP_SCENES = {"popup"}  # rendered from popup.html at the tray panel's size
@@ -64,7 +63,7 @@ MOCK = r"""
       author_count: 3, venue: "Journal of Geophysical Research: Atmospheres", pub_date: day(-5), preprint: 0,
       reason_kind: "journal", reason_value: "Journal of Climate", status: "saved", url: "" },
   ];
-  const events = ["calendar", "tasks", "popup"].includes(scene) ? [
+  const events = ["tasks", "popup"].includes(scene) ? [
     { title: "학회 초록 마감", all_day: true, calendar: "학회", color: "#f08c00" },
     { title: "세미나: 블로킹 예측성", start: "10:00", end: "11:00", calendar: "연구실", color: "#4f7cff" },
     { title: "지도교수 면담", start: "16:00", end: "16:30", calendar: "개인", color: "#2bb673" },
