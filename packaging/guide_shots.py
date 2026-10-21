@@ -85,6 +85,7 @@ MOCK = r"""
       notify_max: 50, seeds: [{ doi: "10.1175/JCLI-D-00-0000.1", title: "Example seed paper on blocking" }],
       keywords: ["atmospheric blocking", "heatwave"], journals: [{ id: "S1", name: "Journal of Climate" }] }),
     papers_list: () => ok({ papers, last_fetch: iso(now), error: "", has_sources: true }),
+    update_status: () => ok({ current: "1.0.0", latest: null, checked: "14:00", error: null, auto: "on", can_install: true }),
   }};
   const go = view => document.querySelector(`[data-view="${view}"]`).click();
   // Scroll only the settings pane; scrollIntoView would also shift the whole page in a screenshot.
@@ -105,7 +106,14 @@ MOCK = r"""
     if (scene === "today") document.getElementById("weather").click();
     if (scene === "papers-settings") { go("settings"); setTimeout(() => show(document.getElementById("set-papers-enabled")), 300); }
     if (scene === "papers") go("papers");
-    if (scene === "tasks") setTimeout(() => openDetail(2), 300);
+    if (scene === "tasks") setTimeout(() => {
+      openDetail(2);
+      // Show the options row under the input too, half filled in.
+      document.getElementById("quick-input").focus();
+      document.getElementById("quick-input").value = "공동저자 미팅 자료 준비";
+      document.getElementById("qa-date").value = day(2);
+      document.getElementById("qa-project").value = "논문A";
+    }, 300);
   }, 200));
 })();
 </script>
