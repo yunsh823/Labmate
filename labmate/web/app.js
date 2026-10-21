@@ -37,7 +37,7 @@ const STRINGS = {
   ko: {
     today: "오늘", week: "이번 주", later: "나중에", someday: "아이디어", done: "완료", trash: "휴지통", settings: "설정",
     projects: "프로젝트", noProjects: "프로젝트 없음", toggleSidebar: "사이드바 접기/펼치기",
-    overdue: "지난 마감", doneToday: "오늘 완료", open: "남은 할 일", items: "항목", tasks: "할 일", ideas: "아이디어",
+    overdue: "지난 마감", weekTasks: "할 일", doneToday: "오늘 완료", open: "남은 할 일", items: "항목", tasks: "할 일", ideas: "아이디어",
     ph: { today: "오늘 할 일 추가", week: "이번 주 할 일 추가", later: "나중에 할 일 추가", someday: "아이디어 추가" },
     empty: {
       today: "오늘 할 일을 추가하세요", week: "이번 주에 할 일을 추가하세요", later: "나중에 할 일을 추가하세요",
@@ -102,7 +102,7 @@ const STRINGS = {
   en: {
     today: "Today", week: "This week", later: "Later", someday: "Ideas", done: "Done", trash: "Trash", settings: "Settings",
     projects: "Projects", noProjects: "No projects", toggleSidebar: "Collapse/expand sidebar",
-    overdue: "Overdue", doneToday: "Done today", open: "to do", items: "items", tasks: "tasks", ideas: "ideas",
+    overdue: "Overdue", weekTasks: "Tasks", doneToday: "Done today", open: "to do", items: "items", tasks: "tasks", ideas: "ideas",
     ph: { today: "Add a task for today", week: "Add a task for this week", later: "Add a task for later", someday: "Add an idea" },
     empty: {
       today: "Add a task for today", week: "Add a task for this week", later: "Add a task for later",
@@ -366,6 +366,8 @@ function renderList() {
     if (S.data.gcal_reauth && !POPUP) {
       html = `<div class="banner">${T.gcalExpired}<button class="btn" data-goto-settings>${T.gcalReconnect}</button></div>` + html;
     }
+  } else if (S.view === "week" && (S.data.events || []).length) {
+    html = eventsSection() + (section(T.weekTasks, tasks) || empty(T.empty.week));
   } else {
     html = tasks.map(taskRow).join("") || empty(T.empty[S.view]);
   }
@@ -375,9 +377,11 @@ function renderList() {
 function eventsSection() {
   const evs = S.data.events || [];
   if (!evs.length) return "";
+  const week = S.view === "week";  // events span several days here, so each row names its day
   return `<div class="section">${T.events}<span class="n">${evs.length}</span></div>` + evs.map(e => `
     <div class="event">
       <span class="ev-bar" style="background:${esc(e.color || "var(--accent)")}"></span>
+      ${week ? `<span class="ev-day">${T.chipDate(parseDate(e.date))}</span>` : ""}
       <span class="ev-time">${e.all_day ? T.allDay : `${e.start}–${e.end}`}</span>
       <span class="ev-title">${esc(e.title)}</span>
       <span class="ev-cal">${esc(e.calendar)}</span>

@@ -224,3 +224,21 @@ def test_migrates_v1_database(tmp_path):
     conn.close()
     t = Store(path).get(1)
     assert t.title == "old" and t.gcal_event_id is None
+
+
+def test_week_events_cover_seven_days(env):
+    store, sync, cal = env
+    now = datetime.now().astimezone()
+    later = (now + timedelta(days=3)).replace(hour=10, minute=0)
+    cal.other += [
+        {"id": "a", "status": "confirmed", "summary": "Ongoing",
+         "start": {"dateTime": (now - timedelta(days=1)).isoformat()}, "end": {"dateTime": (now + timedelta(hours=1)).isoformat()}},
+        {"id": "b", "status": "confirmed", "summary": "Later",
+         "start": {"dateTime": later.isoformat()}, "end": {"dateTime": (later + timedelta(hours=1)).isoformat()}},
+        {"id": "c", "status": "confirmed", "summary": "Deadline",
+         "start": {"date": (TODAY + timedelta(days=2)).isoformat()}, "end": {"date": (TODAY + timedelta(days=3)).isoformat()}},
+    ]
+    run(sync, cal)
+    assert [e["title"] for e in sync.week_events] == ["Ongoing", "Deadline", "Later"]
+    assert [e["date"] for e in sync.week_events] == [(TODAY + timedelta(days=n)).isoformat() for n in (0, 2, 3)]
+    assert [e["title"] for e in sync.today_events] == ["Ongoing"]

@@ -20,6 +20,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",  # list calendars and their events
     "https://www.googleapis.com/auth/calendar.events",    # create/update/delete our events
 ]
+UPCOMING_DAYS = 7  # the This Week view shows events from today through the next 6 days
 APP_TAG = "todolist"  # private extended property marking events this app created (old app name, kept so existing events still match)
 DEFAULT_DURATION = timedelta(hours=1)
 
@@ -141,11 +142,13 @@ def event_duration(ev: dict) -> timedelta:
     return DEFAULT_DURATION
 
 
-def display_event(ev: dict, cal: dict) -> dict:
+def display_event(ev: dict, cal: dict, today: str) -> dict:
     start, end = ev["start"], ev["end"]
     all_day = "date" in start
+    day = start["date"] if all_day else _parse_rfc3339(start["dateTime"]).astimezone().date().isoformat()
     return {
         "title": ev.get("summary", ""),
+        "date": max(day, today),  # an event already under way counts as today's
         "all_day": all_day,
         "start": None if all_day else _parse_rfc3339(start["dateTime"]).astimezone().strftime("%H:%M"),
         "end": None if all_day else _parse_rfc3339(end["dateTime"]).astimezone().strftime("%H:%M"),
@@ -168,6 +171,7 @@ class CalendarSync:
         self.needs_reauth = False  # sign-in expired/revoked; the user must connect again
         self.account: str | None = None
         self.today_events: list[dict] = []
+        self.week_events: list[dict] = []
 
     # --- connection -----------------------------------------------------------
 
@@ -200,7 +204,7 @@ class CalendarSync:
             self._store.unlink_all()
         self._client = None
         self.account = None
-        self.today_events = []
+        self.today_events = self.week_events = []
         self.last_sync = self.last_pull = self.error = None
         self.needs_reauth = False
 
@@ -298,12 +302,13 @@ class CalendarSync:
                     self._store.mark_synced(t.id, etag)
 
         self.last_pull = pull_started
-        self._refresh_today(cal, now)
+        self._refresh_events(cal, now)
         self.last_sync = now.strftime("%H:%M")
 
-    def _refresh_today(self, cal, now: datetime) -> None:
+    def _refresh_events(self, cal, now: datetime) -> None:
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        end = start + timedelta(days=1)
+        end = start + timedelta(days=UPCOMING_DAYS)
+        today = start.date().isoformat()
         events = []
         for c in cal.calendars():
             if c.get("primary"):
@@ -311,6 +316,7 @@ class CalendarSync:
             for ev in cal.events(c["id"], start, end):
                 tagged = ev.get("extendedProperties", {}).get("private", {}).get(APP_TAG) == "1"
                 if ev.get("status") != "cancelled" and not tagged:  # our tasks already show as tasks
-                    events.append(display_event(ev, c))
-        events.sort(key=lambda e: (not e["all_day"], e["start"] or ""))
-        self.today_events = events
+                    events.append(display_event(ev, c, today))
+        events.sort(key=lambda e: (e["date"], not e["all_day"], e["start"] or ""))
+        self.week_events = events
+        self.today_events = [e for e in events if e["date"] == today]

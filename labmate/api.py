@@ -91,7 +91,7 @@ class Api:
                            "papers": self._store.count_new_papers()},
                 "projects": self._store.projects(),
                 "settings": {k: self._store.get_setting(k, v) for k, v in DEFAULTS.items()},
-                "events": self._gcal.today_events if view == "today" else [],
+                "events": {"today": self._gcal.today_events, "week": self._gcal.week_events}.get(view, []),
                 "gcal_reauth": self._gcal.needs_reauth,
                 "weather": weather,
             }
