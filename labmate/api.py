@@ -398,9 +398,10 @@ class Api:
         return json.loads(self._store.get_setting("cal_colors", "{}"))
 
     def _colored(self, events: list[dict]) -> list[dict]:
-        """Events with the colours picked in Settings applied. Caller holds the lock."""
+        """Events in display colour: the event's own Google colour, else the calendar's colour from Settings,
+        else the calendar's Google colour. Caller holds the lock."""
         custom = self._cal_colors()
-        return [{**e, "color": custom.get(e.get("calendar_id"), e["color"])} for e in events]
+        return [{**e, "color": e.get("event_color") or custom.get(e.get("calendar_id"), e["color"])} for e in events]
 
     def set_calendar_color(self, calendar_id: str, color: str) -> dict:
         """color: one of CAL_COLORS, or "" to go back to the calendar's Google colour."""

@@ -49,6 +49,11 @@ class GoogleClient:
         items = self._svc.calendarList().list(minAccessRole="reader").execute().get("items", [])
         return [c for c in items if c.get("selected")]
 
+    def event_colors(self) -> dict[str, str]:
+        """Google's palette for per-event colours: colorId -> background hex."""
+        palette = self._svc.colors().get().execute().get("event", {})
+        return {cid: c["background"] for cid, c in palette.items()}
+
     def events(self, calendar_id: str, time_min: datetime, time_max: datetime) -> list[dict]:
         return self._svc.events().list(
             calendarId=calendar_id, timeMin=time_min.isoformat(), timeMax=time_max.isoformat(),
@@ -142,7 +147,7 @@ def event_duration(ev: dict) -> timedelta:
     return DEFAULT_DURATION
 
 
-def display_event(ev: dict, cal: dict, today: str) -> dict:
+def display_event(ev: dict, cal: dict, today: str, event_colors: dict[str, str]) -> dict:
     start, end = ev["start"], ev["end"]
     all_day = "date" in start
     day = start["date"] if all_day else _parse_rfc3339(start["dateTime"]).astimezone().date().isoformat()
@@ -155,6 +160,7 @@ def display_event(ev: dict, cal: dict, today: str) -> dict:
         "calendar": cal.get("summary", ""),
         "calendar_id": cal["id"],
         "color": cal.get("backgroundColor", ""),
+        "event_color": event_colors.get(ev.get("colorId", "")),  # set on this event in Google; wins over any calendar colour
     }
 
 
@@ -174,6 +180,7 @@ class CalendarSync:
         self.today_events: list[dict] = []
         self.week_events: list[dict] = []
         self.calendars: list[dict] = []  # shown calendars, for the colour settings
+        self._event_colors: dict[str, str] | None = None  # Google's per-event palette, fetched once
 
     # --- connection -----------------------------------------------------------
 
@@ -207,6 +214,7 @@ class CalendarSync:
         self._client = None
         self.account = None
         self.today_events = self.week_events = self.calendars = []
+        self._event_colors = None
         self.last_sync = self.last_pull = self.error = None
         self.needs_reauth = False
 
@@ -311,6 +319,8 @@ class CalendarSync:
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end = start + timedelta(days=UPCOMING_DAYS)
         today = start.date().isoformat()
+        if self._event_colors is None:
+            self._event_colors = cal.event_colors()
         events, calendars = [], cal.calendars()
         self.calendars = [{"id": c["id"], "name": c.get("summary", ""), "color": c.get("backgroundColor", "")}
                           for c in calendars]
@@ -320,7 +330,7 @@ class CalendarSync:
             for ev in cal.events(c["id"], start, end):
                 tagged = ev.get("extendedProperties", {}).get("private", {}).get(APP_TAG) == "1"
                 if ev.get("status") != "cancelled" and not tagged:  # our tasks already show as tasks
-                    events.append(display_event(ev, c, today))
+                    events.append(display_event(ev, c, today, self._event_colors))
         events.sort(key=lambda e: (e["date"], not e["all_day"], e["start"] or ""))
         self.week_events = events
         self.today_events = [e for e in events if e["date"] == today]

@@ -28,6 +28,9 @@ class FakeCalendar:
         ev["etag"] = f"etag{next(self._ids)}"
 
     # GoogleClient interface
+    def event_colors(self):
+        return {"11": "#dc2127"}
+
     def calendars(self):
         return [{"id": "me@example.com", "primary": True, "summary": "me", "backgroundColor": "#4f6bed"}]
 
@@ -242,3 +245,15 @@ def test_week_events_cover_seven_days(env):
     assert [e["title"] for e in sync.week_events] == ["Ongoing", "Deadline", "Later"]
     assert [e["date"] for e in sync.week_events] == [(TODAY + timedelta(days=n)).isoformat() for n in (0, 2, 3)]
     assert [e["title"] for e in sync.today_events] == ["Ongoing"]
+
+
+def test_event_colour_from_google(env):
+    store, sync, cal = env
+    now = datetime.now().astimezone()
+    for eid, extra in (("plain", {}), ("red", {"colorId": "11"})):
+        cal.other.append({"id": eid, "status": "confirmed", "summary": eid, **extra,
+                          "start": {"dateTime": now.replace(hour=11, minute=0).isoformat()},
+                          "end": {"dateTime": now.replace(hour=12, minute=0).isoformat()}})
+    run(sync, cal)
+    colours = {e["title"]: (e["color"], e["event_color"]) for e in sync.today_events}
+    assert colours == {"plain": ("#4f6bed", None), "red": ("#4f6bed", "#dc2127")}

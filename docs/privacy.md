@@ -39,7 +39,7 @@ Labmate(이하 "앱")는 Windows용 개인 할 일 관리 프로그램입니다.
   - `https://www.googleapis.com/auth/calendar.readonly`: 캘린더 목록과 일정을 읽어, 오늘부터 7일간의 일정을 앱에 보여 주기 위해 사용합니다.
   - `https://www.googleapis.com/auth/calendar.events`: 날짜와 시간이 있는 할 일을 사용자의 기본 캘린더에 일정으로 만들고, 수정·삭제하기 위해 사용합니다.
 - **사용 방식**
-  - 앱은 오늘부터 7일간의 일정(제목, 날짜, 시작·종료 시각, 캘린더 이름과 색)을 읽어 화면에 표시합니다. 이 정보는 메모리에만 두고 디스크에 저장하지 않습니다.
+  - 앱은 오늘부터 7일간의 일정(제목, 날짜, 시작·종료 시각, 캘린더 이름과 색, 일정에 정한 색)을 읽어 화면에 표시합니다. 이 정보는 메모리에만 두고 디스크에 저장하지 않습니다.
   - 시간이 있는 할 일은 제목과 날짜·시간으로 일정을 만들고, 앱이 만든 일정임을 표시하는 값을 함께 저장합니다.
   - 앱이 만든 일정이 캘린더에서 수정되면 할 일에 반영하고, 삭제되면 해당 할 일을 휴지통으로 옮깁니다.
 - 구글에서 받은 정보는 위 기능에만 사용하며, 개발자를 포함한 누구에게도 전송·판매·공유하지 않고, 광고나 AI 모델 학습에 사용하지 않습니다.
@@ -112,7 +112,7 @@ All files are kept in `%APPDATA%\Labmate\`.
   - `https://www.googleapis.com/auth/calendar.readonly`: to read your calendar list and events so the events from today through the next 6 days can be shown in the app.
   - `https://www.googleapis.com/auth/calendar.events`: to create, update, and delete events on your primary calendar for tasks that have a date and time.
 - **How the data is used**
-  - The app reads the events from today through the next 6 days (title, date, start and end time, calendar name and color) and displays them. This is kept in memory only and never written to disk.
+  - The app reads the events from today through the next 6 days (title, date, start and end time, calendar name and color, the event's own color) and displays them. This is kept in memory only and never written to disk.
   - For a task with a time, the app creates an event with the task's title, date, and time, plus a private marker identifying it as created by the app.
   - When such an event is changed in Google Calendar, the change is applied to the task; when it is deleted, the task moves to the app's trash.
 - Data received from Google is used only for the features above. It is never transferred, sold, or shared with anyone, including the developer, and is never used for advertising or to train AI models.

@@ -170,3 +170,11 @@ def test_update_check(api, monkeypatch):
     api.set_setting("update_auto", "off")
     api._update_checked = None
     assert not api._update_due()
+
+
+def test_event_colour_beats_calendar_colour(api):
+    api._gcal.calendars = [{"id": "c1", "name": "Lab", "color": "#4f6bed"}]
+    api._gcal.today_events = [{"title": "Plain", "calendar_id": "c1", "color": "#4f6bed", "event_color": None},
+                              {"title": "Red", "calendar_id": "c1", "color": "#4f6bed", "event_color": "#dc2127"}]
+    api.set_calendar_color("c1", "#33b679")
+    assert [e["color"] for e in api.state("today")["events"]] == ["#33b679", "#dc2127"]
