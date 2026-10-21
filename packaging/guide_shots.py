@@ -12,6 +12,8 @@ import tempfile
 import time
 from pathlib import Path
 
+from PIL import Image
+
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "labmate" / "web"
 OUT = ROOT / "docs" / "images"
@@ -22,7 +24,11 @@ SCENES = {  # file name -> scene id understood by the mock below
     "app-03-today.png": "today",
     "app-04-papers-settings.png": "papers-settings",
     "app-05-papers-tab.png": "papers",
+    "feature-tasks.png": "tasks",
+    "feature-calendar.png": "calendar",
+    "feature-popup.png": "popup",
 }
+POPUP_SCENES = {"popup"}  # rendered from popup.html at the tray panel's size
 
 # Stands in for the Python side (window.pywebview.api) with sample data, then drives the UI to a scene.
 MOCK = r"""
@@ -30,6 +36,8 @@ MOCK = r"""
 <script>
 (() => {
   const scene = new URLSearchParams(location.search).get("scene");
+  // Headless Edge won't lay out a window as narrow as the tray panel, so pin the panel to its real size.
+  if (scene === "popup") document.write("<style>.popup .pop { width: 380px; height: 560px; box-sizing: border-box; }</style>");
   const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   const now = new Date(); const day = n => { const d = new Date(now); d.setDate(d.getDate() + n); return iso(d); };
   let id = 0;
@@ -56,11 +64,16 @@ MOCK = r"""
       author_count: 3, venue: "Journal of Geophysical Research: Atmospheres", pub_date: day(-5), preprint: 0,
       reason_kind: "journal", reason_value: "Journal of Climate", status: "saved", url: "" },
   ];
-  const settings = { theme: "light", lang: "ko", sidebar: "expanded", font: "", remind: "10",
-                     papers_enabled: "on", papers_preprints: "off" };
+  const events = ["calendar", "tasks", "popup"].includes(scene) ? [
+    { title: "학회 초록 마감", all_day: true, calendar: "학회", color: "#f08c00" },
+    { title: "세미나: 블로킹 예측성", start: "10:00", end: "11:00", calendar: "연구실", color: "#4f7cff" },
+    { title: "지도교수 면담", start: "16:00", end: "16:30", calendar: "개인", color: "#2bb673" },
+  ] : [];
+  const settings = { theme: scene === "popup" ? "dark" : "light", lang: "ko", sidebar: "expanded", font: "",
+                     remind: "10", papers_enabled: "on", papers_preprints: "off" };
   const ok = v => Promise.resolve(v);
   window.pywebview = { api: {
-    state: () => ok({ today: iso(now), settings: { ...settings }, tasks, events: [], gcal_reauth: false,
+    state: () => ok({ today: iso(now), settings: { ...settings }, tasks, events, gcal_reauth: false,
       weather: { temp: 21, sky: "partly", pty: "none", night: false, tmin: 14, tmax: 22, pop_max: 70, hourly: hours, updated: "14:00" },
       counts: { today: 4, week: 0, later: 2, someday: 1, done: 1, trash: 0, papers: 2 }, projects: ["논문A", "논문B"] }),
     fonts: () => ok(["Malgun Gothic"]),
@@ -93,6 +106,7 @@ MOCK = r"""
     if (scene === "today") document.getElementById("weather").click();
     if (scene === "papers-settings") { go("settings"); setTimeout(() => show(document.getElementById("set-papers-enabled")), 300); }
     if (scene === "papers") go("papers");
+    if (scene === "tasks") setTimeout(() => openDetail(2), 300);
   }, 200));
 })();
 </script>
@@ -105,21 +119,28 @@ def main() -> None:
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         site = Path(tmp) / "web"
         shutil.copytree(WEB, site)
-        page = site / "index.html"
-        html = page.read_text(encoding="utf-8")
-        page.write_text(html.replace('<script src="app.js"></script>', MOCK + '<script src="app.js"></script>'),
-                        encoding="utf-8")
+        for page in (site / "index.html", site / "popup.html"):
+            html = page.read_text(encoding="utf-8")
+            page.write_text(html.replace('<script src="app.js"></script>', MOCK + '<script src="app.js"></script>'),
+                            encoding="utf-8")
         for name, scene in SCENES.items():
             target = OUT / name
             target.unlink(missing_ok=True)
+            popup = scene in POPUP_SCENES
+            page = site / ("popup.html" if popup else "index.html")
             subprocess.run([
                 str(EDGE), "--headless=new", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=1",
-                f"--user-data-dir={Path(tmp) / 'profile'}", "--window-size=1000,640", "--virtual-time-budget=4000",
+                f"--user-data-dir={Path(tmp) / 'profile'}", "--window-size=1000,640",
+                "--virtual-time-budget=4000",
                 f"--screenshot={target}", page.as_uri() + f"?scene={scene}",
             ], check=True, capture_output=True, timeout=60)
             # msedge.exe returns at once and a background process writes the file a moment later.
             if not _wait_for(target):
                 raise SystemExit(f"Edge did not write {target.name}")
+            if popup:
+                with Image.open(target) as shot:
+                    panel = shot.crop((0, 0, 380, 560))
+                panel.save(target)
             print("saved", target.relative_to(ROOT))
 
 
