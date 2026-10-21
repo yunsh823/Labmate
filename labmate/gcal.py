@@ -153,6 +153,7 @@ def display_event(ev: dict, cal: dict, today: str) -> dict:
         "start": None if all_day else _parse_rfc3339(start["dateTime"]).astimezone().strftime("%H:%M"),
         "end": None if all_day else _parse_rfc3339(end["dateTime"]).astimezone().strftime("%H:%M"),
         "calendar": cal.get("summary", ""),
+        "calendar_id": cal["id"],
         "color": cal.get("backgroundColor", ""),
     }
 
@@ -172,6 +173,7 @@ class CalendarSync:
         self.account: str | None = None
         self.today_events: list[dict] = []
         self.week_events: list[dict] = []
+        self.calendars: list[dict] = []  # shown calendars, for the colour settings
 
     # --- connection -----------------------------------------------------------
 
@@ -204,7 +206,7 @@ class CalendarSync:
             self._store.unlink_all()
         self._client = None
         self.account = None
-        self.today_events = self.week_events = []
+        self.today_events = self.week_events = self.calendars = []
         self.last_sync = self.last_pull = self.error = None
         self.needs_reauth = False
 
@@ -309,8 +311,10 @@ class CalendarSync:
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end = start + timedelta(days=UPCOMING_DAYS)
         today = start.date().isoformat()
-        events = []
-        for c in cal.calendars():
+        events, calendars = [], cal.calendars()
+        self.calendars = [{"id": c["id"], "name": c.get("summary", ""), "color": c.get("backgroundColor", "")}
+                          for c in calendars]
+        for c in calendars:
             if c.get("primary"):
                 self.account = c["id"]
             for ev in cal.events(c["id"], start, end):

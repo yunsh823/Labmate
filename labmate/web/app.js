@@ -96,6 +96,15 @@ const STRINGS = {
     gcalFailed: "연결하지 못했어요. 다시 시도하세요.",
     gcalExpired: "구글 캘린더 로그인이 만료됐어요. 다시 연결하세요.", gcalReconnect: "다시 연결",
     confirmDisconnect: "구글 캘린더 연결을 해제할까요? 이미 올라간 일정은 캘린더에 그대로 남습니다.",
+    gcalColors: "캘린더 색상", gcalColorsDesc: "이 앱에서 보이는 색만 바뀌고, 구글 캘린더에는 영향이 없어요.",
+    colorDefault: "기본",
+    updates: "업데이트", updateVersion: "버전", updateCurrent: v => `현재 ${v}`,
+    updateAvailable: v => `새 버전(${v})이 나왔어요`, updateUpToDate: "최신 버전이에요", updateChecked: t => `${t} 확인`,
+    updateCheck: "업데이트 확인", updateInstall: "업데이트", updateChecking: "확인하는 중…",
+    updateInstalling: "내려받는 중이에요. 설치가 끝나면 앱이 다시 켜져요.",
+    updateAuto: "자동으로 확인", updateAutoDesc: "하루 한 번 새 버전을 확인하고 알려 줘요.",
+    updateErr: { network: "인터넷 연결을 확인해 주세요.", corrupt: "받은 파일이 손상됐어요. 다시 시도해 주세요.",
+                 dev: "개발 모드로 실행 중이라 설치할 수 없어요.", no_update: "설치할 새 버전이 없어요." },
     day: (d, withMonth = true) => `${withMonth ? `${d.getMonth() + 1}월 ` : ""}${d.getDate()}일 (${"일월화수목금토"[d.getDay()]})`,
     chipDate: d => `${d.getMonth() + 1}/${d.getDate()}(${"일월화수목금토"[d.getDay()]})`,
   },
@@ -161,6 +170,15 @@ const STRINGS = {
     gcalFailed: "Couldn't connect. Try again.",
     gcalExpired: "Your Google Calendar sign-in expired. Reconnect to keep syncing.", gcalReconnect: "Reconnect",
     confirmDisconnect: "Disconnect Google Calendar? Events already created stay in your calendar.",
+    gcalColors: "Calendar colors", gcalColorsDesc: "Changes colors in this app only; Google Calendar is untouched.",
+    colorDefault: "Default",
+    updates: "Updates", updateVersion: "Version", updateCurrent: v => `Current ${v}`,
+    updateAvailable: v => `Version ${v} is available`, updateUpToDate: "Up to date", updateChecked: t => `checked ${t}`,
+    updateCheck: "Check for updates", updateInstall: "Update", updateChecking: "Checking…",
+    updateInstalling: "Downloading. The app restarts when the update is installed.",
+    updateAuto: "Check automatically", updateAutoDesc: "Looks for a new version once a day and lets you know.",
+    updateErr: { network: "Check your internet connection.", corrupt: "The download was damaged. Please try again.",
+                 dev: "Running from source; nothing to install.", no_update: "No new version to install." },
     day: (d, withMonth = true) => d.toLocaleDateString("en-US", withMonth
       ? { weekday: "short", month: "short", day: "numeric" } : { weekday: "short", day: "numeric" }),
     chipDate: d => d.toLocaleDateString("en-US", { weekday: "short", month: "numeric", day: "numeric" }),
@@ -483,6 +501,21 @@ async function renderSettings() {
   $("hotkey-desc").classList.toggle("setting-error", !info.hotkey_ok);
   $("hotkey-key").textContent = info.hotkey;
   renderGcal(await api().gcal_status());
+  renderUpdate(await api().update_status());
+}
+
+function renderUpdate(st, note = "") {
+  let desc = T.updateCurrent(st.current);
+  if (st.latest) desc += ` · ${T.updateAvailable(st.latest)}`;
+  else if (st.checked && !st.error) desc += ` · ${T.updateUpToDate}`;
+  if (st.checked) desc += ` (${T.updateChecked(st.checked)})`;
+  const err = note in T.updateErr ? T.updateErr[note] : st.error && T.updateErr[st.error];
+  $("update-desc").innerHTML = esc(desc) + (err ? `<div class="setting-error">${esc(err)}</div>`
+    : note ? `<div>${esc(note)}</div>` : "");
+  const busy = note === T.updateChecking || note === T.updateInstalling;
+  $("update-actions").innerHTML = `<button class="btn" data-act="check" ${busy ? "disabled" : ""}>${T.updateCheck}</button>`
+    + (st.latest && st.can_install ? `<button class="btn primary" data-act="install" ${busy ? "disabled" : ""}>${T.updateInstall}</button>` : "");
+  $("set-update-auto").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.value === st.auto));
 }
 
 function renderAutostart(info) {
@@ -571,6 +604,17 @@ function renderGcal(st, busy = false) {
   if (st.error) desc += `<div class="setting-error">${T.gcalError}: ${esc(st.error)}</div>`;
   $("gcal-desc").innerHTML = desc;
   $("gcal-actions").innerHTML = actions;
+  const cals = st.connected && !st.needs_reauth ? st.calendars || [] : [];
+  $("gcal-colors-row").hidden = !cals.length;
+  $("gcal-colors").innerHTML = cals.map(c => `
+    <div class="cal-row">
+      <span class="cal-name"><span class="cal-dot" style="background:${esc(c.custom || c.color)}"></span>${esc(c.name)}</span>
+      <span class="swatches">
+        <button class="swatch-default" data-cal="${esc(c.id)}" data-color="" aria-pressed="${!c.custom}">${T.colorDefault}</button>
+        ${st.palette.map(p => `<button class="swatch" data-cal="${esc(c.id)}" data-color="${p}" style="background:${p}"
+          aria-pressed="${c.custom === p}" aria-label="${p}"></button>`).join("")}
+      </span>
+    </div>`).join("");
 }
 
 function bindSettings() {
@@ -678,6 +722,26 @@ function bindSettings() {
   $("set-remind").addEventListener("click", e => {
     const b = e.target.closest("[data-value]");
     if (b) setSetting("remind", b.dataset.value).then(renderSettings);
+  });
+  $("gcal-colors").addEventListener("click", async e => {
+    const b = e.target.closest("[data-cal]");
+    if (b) renderGcal(await api().set_calendar_color(b.dataset.cal, b.dataset.color));
+  });
+  $("set-update-auto").addEventListener("click", e => {
+    const b = e.target.closest("[data-value]");
+    if (b) setSetting("update_auto", b.dataset.value).then(async () => renderUpdate(await api().update_status()));
+  });
+  $("update-actions").addEventListener("click", async e => {
+    const act = e.target.closest("[data-act]")?.dataset.act;
+    if (!act) return;
+    renderUpdate(await api().update_status(), act === "check" ? T.updateChecking : T.updateInstalling);
+    try {
+      renderUpdate(await (act === "check" ? api().check_update_now() : api().install_update()),
+                   act === "install" ? T.updateInstalling : "");
+    } catch (err) {
+      const code = String(err && (err.message || err)).match(/[a-z_]+$/);
+      renderUpdate(await api().update_status(), code ? code[0] : "network");
+    }
   });
   $("gcal-actions").addEventListener("click", async e => {
     const act = e.target.closest("[data-act]")?.dataset.act;

@@ -24,11 +24,17 @@ TRAY_TEXT = {
     "ko": {"today": "오늘 할 일", "main": "전체 창 열기", "quit": "종료",
            "open": "Labmate · 오늘 남은 할 일 {n}개", "clear": "Labmate · 오늘 할 일을 모두 끝냈어요",
            "soon": "{m}분 후 시작", "soon_many": "곧 시작하는 일정 {n}개",
-           "papers": "새 논문이 도착했어요.", "papers_title": "Labmate · 새 논문 {n}편"},
+           "papers": "새 논문이 도착했어요.", "papers_title": "Labmate · 새 논문 {n}편",
+           "update": "업데이트 설치 (v{v})", "update_title": "Labmate · 새 버전 {v}",
+           "update_body": "트레이 메뉴나 설정에서 업데이트할 수 있어요.",
+           "update_failed": "업데이트를 받지 못했어요. 잠시 후 다시 시도해 주세요."},
     "en": {"today": "Today", "main": "Open full window", "quit": "Quit",
            "open": "Labmate · {n} left today", "clear": "Labmate · All done for today",
            "soon": "Starts in {m} min", "soon_many": "{n} items starting soon",
-           "papers": "New papers have arrived.", "papers_title": "Labmate · {n} new papers"},
+           "papers": "New papers have arrived.", "papers_title": "Labmate · {n} new papers",
+           "update": "Install update (v{v})", "update_title": "Labmate · Version {v} is out",
+           "update_body": "Update from the tray menu or Settings.",
+           "update_failed": "Couldn't download the update. Please try again later."},
 }
 
 
@@ -96,6 +102,7 @@ class Desktop:
         self.hotkey_ok = False
         self._reminded: set[str] = set()
         self._papers_retry_at = 0.0
+        self._update_notified: str | None = None
 
         self.main = webview.create_window(
             "Labmate", url=str(WEB_DIR / "index.html"), js_api=self.api,
@@ -113,6 +120,8 @@ class Desktop:
             # Labels are callables so they follow the language setting.
             pystray.MenuItem(lambda item: self._text("today"), lambda icon, item: self.toggle_popup(), default=True),
             pystray.MenuItem(lambda item: self._text("main"), lambda icon, item: self.show_main()),
+            pystray.MenuItem(lambda item: self._text("update").format(v=(self.api._update_info or {}).get("version")),
+                             lambda icon, item: self._install_update(), visible=lambda item: bool(self.api._update_info)),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(lambda item: self._text("quit"), lambda icon, item: self.quit()),
         ))
@@ -134,6 +143,7 @@ class Desktop:
             self.refresh_icon()
             self._check_reminders()
             self._check_papers()
+            self._check_update()
             time.sleep(30)
 
     def _hotkey_loop(self) -> None:
@@ -161,6 +171,23 @@ class Desktop:
             text = self.api._json_setting_text("papers_notify_text") or self._text("papers")
             self.icon.notify(text, self._text("papers_title").format(n=added))
             self.after_sync()
+
+    def _check_update(self) -> None:
+        if not self.api._update_due():
+            return
+        info = self.api._check_update()
+        self.icon.update_menu()
+        if info and info["version"] != self._update_notified:  # once per version per run
+            self._update_notified = info["version"]
+            self.icon.notify(self._text("update_body"), self._text("update_title").format(v=info["version"]))
+
+    def _install_update(self) -> None:
+        def run():
+            try:
+                self.api.install_update()
+            except Exception:
+                self.icon.notify(self._text("update_failed"), "Labmate")
+        threading.Thread(target=run, daemon=True).start()
 
     def _check_reminders(self) -> None:
         minutes = self.api._setting("remind")
@@ -268,6 +295,9 @@ class Desktop:
         self.main.restore()
         if task_id is not None:
             self.main.evaluate_js(f"focusTask({int(task_id)})")
+
+    def quit_soon(self) -> None:
+        threading.Timer(1.0, self.quit).start()
 
     def quit(self) -> None:
         self.quitting = True

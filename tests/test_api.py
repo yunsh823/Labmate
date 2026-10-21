@@ -49,7 +49,8 @@ def test_project_filter_passthrough(api):
 
 def test_settings_persist_and_validate(api, tmp_path):
     assert api.state("today")["settings"] == {"theme": "system", "lang": "ko", "sidebar": "expanded", "font": "",
-                                              "remind": "10", "papers_enabled": "on", "papers_preprints": "off"}
+                                              "remind": "10", "papers_enabled": "on", "papers_preprints": "off",
+                                              "update_auto": "on"}
     api.set_setting("theme", "dark")
     api.set_setting("lang", "en")
     api.set_setting("font", "Malgun Gothic")
@@ -144,3 +145,28 @@ def test_total_fetch_failure_is_retried_not_skipped(api, monkeypatch):
 def test_internal_attributes_hidden_from_js(api):
     public = [n for n in vars(api) if not n.startswith("_")]
     assert public == []
+
+
+def test_calendar_colors_apply_to_events(api):
+    api._gcal.calendars = [{"id": "c1", "name": "Lab", "color": "#4f6bed"}]
+    api._gcal.today_events = [{"title": "Seminar", "calendar_id": "c1", "color": "#4f6bed"}]
+    st = api.set_calendar_color("c1", "#33b679")
+    assert st["calendars"][0]["custom"] == "#33b679"
+    assert api.state("today")["events"][0]["color"] == "#33b679"
+    api.set_calendar_color("c1", "")
+    assert api.state("today")["events"][0]["color"] == "#4f6bed"
+    with pytest.raises(ValueError):
+        api.set_calendar_color("c1", "red; background:url(x)")
+
+
+def test_update_check(api, monkeypatch):
+    from labmate import updater
+    assert api._update_due()
+    monkeypatch.setattr(updater, "latest", lambda: {"version": "9.9.9"})
+    st = api.check_update_now()
+    assert st["latest"] == "9.9.9" and st["error"] is None and not api._update_due()
+    with pytest.raises(ValueError, match="dev"):
+        api.install_update()  # tests run from source, never frozen
+    api.set_setting("update_auto", "off")
+    api._update_checked = None
+    assert not api._update_due()

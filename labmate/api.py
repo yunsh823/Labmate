@@ -5,12 +5,13 @@ hidden from JavaScript.
 """
 
 import json
+import sys
 import threading
 import webbrowser
 from dataclasses import asdict
-from datetime import date
+from datetime import date, datetime, timedelta
 
-from . import autostart
+from . import __version__, autostart, updater
 from .db import BUCKETS, VIEWS, Store, Task
 from .gcal import CalendarSync
 from . import papers, places
@@ -25,11 +26,14 @@ SETTINGS = {
     "remind": ("off", "5", "10", "15", "30"),  # minutes before a timed task/event
     "papers_enabled": ("on", "off"),
     "papers_preprints": ("off", "on"),  # most people never read preprints, so off by default
+    "update_auto": ("on", "off"),  # check GitHub for a new version once a day
 }
 DEFAULTS = {"theme": "system", "lang": "ko", "sidebar": "expanded", "font": "", "remind": "10",
-            "papers_enabled": "on", "papers_preprints": "off"}
+            "papers_enabled": "on", "papers_preprints": "off", "update_auto": "on"}
 NOTIFY_TEXT_MAX = 50
 MAX_PAPER_ITEMS = 10  # per list: seed papers, keywords, journals
+# Colours offered for calendars in Settings (Google Calendar's own palette); they only change this app's display.
+CAL_COLORS = ("#d50000", "#f4511e", "#f6bf26", "#33b679", "#039be5", "#3f51b5", "#8e24aa", "#616161")
 
 
 def _task_dict(t: Task) -> dict:
@@ -46,6 +50,9 @@ class Api:
         self._font_cache: list[str] | None = None
         self._gcal = CalendarSync(store, self._lock)
         self._weather = Weather()
+        self._update_info: dict | None = None  # newer release found by the last check
+        self._update_error: str | None = None
+        self._update_checked: datetime | None = None
 
     def _open_today(self) -> int:
         with self._lock:
@@ -91,7 +98,7 @@ class Api:
                            "papers": self._store.count_new_papers()},
                 "projects": self._store.projects(),
                 "settings": {k: self._store.get_setting(k, v) for k, v in DEFAULTS.items()},
-                "events": {"today": self._gcal.today_events, "week": self._gcal.week_events}.get(view, []),
+                "events": self._colored({"today": self._gcal.today_events, "week": self._gcal.week_events}.get(view, [])),
                 "gcal_reauth": self._gcal.needs_reauth,
                 "weather": weather,
             }
@@ -380,8 +387,35 @@ class Api:
 
     def gcal_status(self) -> dict:
         g = self._gcal
+        with self._lock:
+            custom = self._cal_colors()
         return {"has_client": g.has_client_file(), "connected": g.connected(), "account": g.account,
-                "last_sync": g.last_sync, "error": g.error, "needs_reauth": g.needs_reauth}
+                "last_sync": g.last_sync, "error": g.error, "needs_reauth": g.needs_reauth,
+                "calendars": [{**c, "custom": custom.get(c["id"], "")} for c in g.calendars], "palette": CAL_COLORS}
+
+    def _cal_colors(self) -> dict:
+        """Calendar id -> colour picked in Settings. Caller holds the lock."""
+        return json.loads(self._store.get_setting("cal_colors", "{}"))
+
+    def _colored(self, events: list[dict]) -> list[dict]:
+        """Events with the colours picked in Settings applied. Caller holds the lock."""
+        custom = self._cal_colors()
+        return [{**e, "color": custom.get(e.get("calendar_id"), e["color"])} for e in events]
+
+    def set_calendar_color(self, calendar_id: str, color: str) -> dict:
+        """color: one of CAL_COLORS, or "" to go back to the calendar's Google colour."""
+        if color and color not in CAL_COLORS:
+            raise ValueError(color)
+        with self._lock:
+            custom = self._cal_colors()
+            if color:
+                custom[calendar_id] = color
+            else:
+                custom.pop(calendar_id, None)
+            self._store.set_setting("cal_colors", json.dumps(custom))
+        if self._shell:
+            self._shell.after_sync()
+        return self.gcal_status()
 
     def gcal_import_client(self) -> dict:
         path = self._shell.pick_json_file() if self._shell else None
@@ -405,3 +439,52 @@ class Api:
         if self._shell:
             self._shell.after_sync()
         return self.gcal_status()
+
+    # --- updates ---------------------------------------------------------------
+
+    def _update_due(self) -> bool:
+        """Automatic check: at start and then daily (30 min after a failure), unless turned off."""
+        if self._setting("update_auto") != "on":
+            return False
+        if self._update_checked is None:
+            return True
+        wait = timedelta(minutes=30) if self._update_error else timedelta(days=1)
+        return datetime.now() - self._update_checked >= wait
+
+    def _check_update(self) -> dict | None:
+        try:
+            self._update_info = updater.latest()
+            self._update_error = None
+        except Exception:
+            self._update_error = "network"
+        self._update_checked = datetime.now()
+        return self._update_info
+
+    def update_status(self) -> dict:
+        info, checked = self._update_info, self._update_checked
+        return {"current": __version__, "latest": info["version"] if info else None,
+                "checked": checked.strftime("%H:%M") if checked else None, "error": self._update_error,
+                "auto": self._setting("update_auto"), "can_install": bool(getattr(sys, "frozen", False))}
+
+    def check_update_now(self) -> dict:
+        self._check_update()
+        if self._shell:
+            self._shell.refresh_icon()  # shows or hides the tray's update item
+        return self.update_status()
+
+    def install_update(self) -> dict:
+        info = self._update_info
+        if not info:
+            raise ValueError("no_update")
+        if not getattr(sys, "frozen", False):
+            raise ValueError("dev")  # running from source: there is no installed copy to replace
+        try:
+            path = updater.download(info)
+        except ValueError:
+            raise ValueError("corrupt") from None
+        except Exception:
+            raise ValueError("network") from None
+        updater.install(path)
+        if self._shell:
+            self._shell.quit_soon()  # the installer would end the app anyway; close cleanly first
+        return self.update_status()

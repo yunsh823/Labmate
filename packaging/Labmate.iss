@@ -52,6 +52,8 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 
 [Run]
 Filename: "{app}\Labmate.exe"; Description: "{cm:LaunchProgram,Labmate}"; Flags: nowait postinstall skipifsilent
+; In-app updates install silently; start the new version afterwards.
+Filename: "{app}\Labmate.exe"; Flags: nowait; Check: WizardSilent
 
 [Code]
 // The app hides to the tray instead of quitting on a close request, so Windows'

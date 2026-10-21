@@ -1,6 +1,6 @@
 # Labmate 개인정보처리방침 / Privacy Policy
 
-시행일: 2026년 10월 20일 · Effective: October 20, 2026
+시행일: 2026년 10월 21일 · Effective: October 21, 2026
 
 [한국어](#한국어) · [English](#english)
 
@@ -36,10 +36,10 @@ Labmate(이하 "앱")는 Windows용 개인 할 일 관리 프로그램입니다.
 #### 3-1. 구글 캘린더 (사용자가 "연결"한 경우)
 
 - **요청 권한**
-  - `https://www.googleapis.com/auth/calendar.readonly`: 캘린더 목록과 일정을 읽어, 오늘의 일정을 앱에 보여 주기 위해 사용합니다.
+  - `https://www.googleapis.com/auth/calendar.readonly`: 캘린더 목록과 일정을 읽어, 오늘부터 7일간의 일정을 앱에 보여 주기 위해 사용합니다.
   - `https://www.googleapis.com/auth/calendar.events`: 날짜와 시간이 있는 할 일을 사용자의 기본 캘린더에 일정으로 만들고, 수정·삭제하기 위해 사용합니다.
 - **사용 방식**
-  - 앱은 오늘 날짜의 일정(제목, 시작·종료 시각, 캘린더 이름과 색)을 읽어 화면에 표시합니다. 이 정보는 메모리에만 두고 디스크에 저장하지 않습니다.
+  - 앱은 오늘부터 7일간의 일정(제목, 날짜, 시작·종료 시각, 캘린더 이름과 색)을 읽어 화면에 표시합니다. 이 정보는 메모리에만 두고 디스크에 저장하지 않습니다.
   - 시간이 있는 할 일은 제목과 날짜·시간으로 일정을 만들고, 앱이 만든 일정임을 표시하는 값을 함께 저장합니다.
   - 앱이 만든 일정이 캘린더에서 수정되면 할 일에 반영하고, 삭제되면 해당 할 일을 휴지통으로 옮깁니다.
 - 구글에서 받은 정보는 위 기능에만 사용하며, 개발자를 포함한 누구에게도 전송·판매·공유하지 않고, 광고나 AI 모델 학습에 사용하지 않습니다.
@@ -61,6 +61,7 @@ Labmate(이하 "앱")는 Windows용 개인 할 일 관리 프로그램입니다.
 
 - 논문 제목을 누르면 기본 웹 브라우저에서 해당 논문 페이지(DOI 주소)가 열립니다.
 - 앱이 두 번 실행되지 않도록 하는 통신은 사용자의 컴퓨터 안(`127.0.0.1`)에서만 이루어집니다.
+- **업데이트 확인**(`api.github.com`, `github.com`): 앱을 켤 때와 하루 한 번(설정에서 끌 수 있음), 그리고 설정에서 "업데이트 확인"을 누를 때 GitHub에 최신 버전 정보를 요청합니다. 이때 앱 버전이 함께 전달됩니다. "업데이트"를 누르면 GitHub에서 설치 파일을 내려받습니다. 그 밖의 사용자 정보는 보내지 않습니다.
 
 각 외부 서비스는 자체 개인정보처리방침에 따라 요청을 처리합니다.
 
@@ -108,10 +109,10 @@ All files are kept in `%APPDATA%\Labmate\`.
 #### 3.1 Google Calendar (only if you click "Connect")
 
 - **Scopes requested**
-  - `https://www.googleapis.com/auth/calendar.readonly`: to read your calendar list and events so today's events can be shown in the app.
+  - `https://www.googleapis.com/auth/calendar.readonly`: to read your calendar list and events so the events from today through the next 6 days can be shown in the app.
   - `https://www.googleapis.com/auth/calendar.events`: to create, update, and delete events on your primary calendar for tasks that have a date and time.
 - **How the data is used**
-  - The app reads today's events (title, start and end time, calendar name and color) and displays them. This is kept in memory only and never written to disk.
+  - The app reads the events from today through the next 6 days (title, date, start and end time, calendar name and color) and displays them. This is kept in memory only and never written to disk.
   - For a task with a time, the app creates an event with the task's title, date, and time, plus a private marker identifying it as created by the app.
   - When such an event is changed in Google Calendar, the change is applied to the task; when it is deleted, the task moves to the app's trash.
 - Data received from Google is used only for the features above. It is never transferred, sold, or shared with anyone, including the developer, and is never used for advertising or to train AI models.
@@ -133,6 +134,7 @@ All files are kept in `%APPDATA%\Labmate\`.
 
 - Clicking a paper title opens its page (its DOI link) in your default web browser.
 - The check that keeps the app from running twice talks only to your own computer (`127.0.0.1`).
+- **Update check** (`api.github.com`, `github.com`): at start-up and once a day (can be turned off in Settings), and when you click "Check for updates", the app asks GitHub for the latest version, sending the app's version number. Clicking "Update" downloads the installer from GitHub. Nothing else about you is sent.
 
 Each outside service handles requests under its own privacy policy.
 
