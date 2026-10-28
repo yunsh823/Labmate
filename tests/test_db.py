@@ -65,7 +65,7 @@ def test_recurring_rolls_forward_instead_of_closing(store):
     t = store.get(tid)
     assert not t.done
     assert t.due_date == TODAY + timedelta(days=7)
-    assert t.bucket == "week"
+    assert t.bucket == "later"  # 7 days out is just past This week; it moves in the next day
     assert tid not in ids(store.list_view("today", today=TODAY))
     assert tid in ids(store.list_view("today", today=TODAY + timedelta(days=7)))
 
@@ -148,3 +148,15 @@ def test_dated_tasks_follow_their_date(store):
     # As the days pass, the Later task comes into This week and then into Today.
     assert d in ids(store.list_view("week", today=TODAY + timedelta(days=1)))
     assert d in ids(store.list_view("today", today=TODAY + timedelta(days=7)))
+
+
+def test_project_view_shows_the_whole_project(store):
+    a = store.add("Today", project="P")
+    b = store.add("Later", project="P", due_date=TODAY + timedelta(days=30))
+    c = store.add("Idea", project="P", bucket="someday")
+    d = store.add("Done", project="P")
+    store.set_done(d, True)
+    store.add("Other project", project="Q")
+    assert sorted(ids(store.list_view("project", "P", TODAY))) == sorted([a, b, c, d])
+    with pytest.raises(ValueError):
+        store.list_view("project", None, TODAY)

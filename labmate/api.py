@@ -96,9 +96,10 @@ class Api:
             return {
                 "today": today.isoformat(),
                 "tasks": [_task_dict(t) for t in self._store.list_view(view, project, today)],
-                "counts": {**{v: self._store.count(v, project, today) for v in VIEWS},
+                "counts": {**{v: self._store.count(v, None, today) for v in VIEWS},  # sidebar totals
                            "papers": self._store.count_new_papers()},
                 "projects": self._store.projects(),
+                "project_colors": json.loads(self._store.get_setting("project_colors", "{}")), "palette": CAL_COLORS,
                 "settings": {k: self._store.get_setting(k, v) for k, v in DEFAULTS.items()},
                 "events": self._colored({"today": self._gcal.today_events, "week": self._gcal.week_events}.get(view, [])),
                 "gcal_reauth": self._gcal.needs_reauth,
@@ -404,6 +405,18 @@ class Api:
         else the calendar's Google colour. Caller holds the lock."""
         custom = self._cal_colors()
         return [{**e, "color": e.get("event_color") or custom.get(e.get("calendar_id"), e["color"])} for e in events]
+
+    def set_project_color(self, project: str, color: str) -> None:
+        """color: one of CAL_COLORS, or "" to go back to the colour derived from the name."""
+        if color and color not in CAL_COLORS:
+            raise ValueError(color)
+        with self._lock:
+            colors = json.loads(self._store.get_setting("project_colors", "{}"))
+            if color:
+                colors[project] = color
+            else:
+                colors.pop(project, None)
+            self._store.set_setting("project_colors", json.dumps(colors, ensure_ascii=False))
 
     def set_calendar_color(self, calendar_id: str, color: str) -> dict:
         """color: one of CAL_COLORS, or "" to go back to the calendar's Google colour."""

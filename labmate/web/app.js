@@ -42,7 +42,9 @@ const STRINGS = {
     empty: {
       today: "오늘 할 일을 추가하세요", week: "이번 주에 할 일을 추가하세요", later: "나중에 할 일을 추가하세요",
       someday: "아이디어를 적어 두세요", done: "완료한 할 일이 없어요", trash: "휴지통이 비어 있어요",
+      project: "이 프로젝트에 할 일이 없어요",
     },
+    phProject: p => `${p}에 할 일 추가`,
     allDone: "오늘 할 일을 모두 끝냈어요",
     hint: "클릭: 편집 · Delete: 휴지통 · Esc: 닫기", hintTrash: "휴지통 항목은 30일 후 자동 삭제됩니다",
     addTask: "할 일 추가", close: "닫기", title: "제목", bucket: "분류", project: "프로젝트", none: "없음",
@@ -116,7 +118,9 @@ const STRINGS = {
     empty: {
       today: "Add a task for today", week: "Add a task for this week", later: "Add a task for later",
       someday: "Write down an idea", done: "No completed tasks", trash: "Trash is empty",
+      project: "No tasks in this project",
     },
+    phProject: p => `Add a task to ${p}`,
     allDone: "All done for today",
     hint: "Click: edit · Delete: trash · Esc: close", hintTrash: "Items in trash are deleted after 30 days",
     addTask: "Add task", close: "Close", title: "Title", bucket: "List", project: "Project", none: "None",
@@ -245,6 +249,11 @@ function daysUntil(due) {
   return Math.round((parseDate(due) - parseDate(S.data.today)) / 86400000);
 }
 
+// A project's colour: the one picked on its page, else one derived from its name.
+function projectColor(name) {
+  return (S.data.project_colors || {})[name] || "";
+}
+
 function hue(name) {
   // Golden-angle spread so names differing by one character ("논문A"/"논문B") get distinct colors.
   let h = 0;
@@ -316,8 +325,8 @@ function renderNav() {
     </li>`).join("");
   $("projects").innerHTML = projects.length
     ? projects.map(p => `
-      <li data-project="${esc(p)}" class="${p === S.project ? "on" : ""}" title="${esc(p)}">
-        <span class="dot" style="--h:${hue(p)}"></span><span class="label">${esc(p)}</span>
+      <li data-project="${esc(p)}" class="${S.view === "project" && p === S.project ? "on" : ""}" title="${esc(p)}">
+        <span class="dot" style="${projectColor(p) ? `background:${projectColor(p)}` : `--h:${hue(p)}`}"></span><span class="label">${esc(p)}</span>
       </li>`).join("")
     : `<li class="empty-projects"><span class="label">${T.noProjects}</span></li>`;
   $("settings-btn").classList.toggle("on", S.view === "settings");
@@ -352,7 +361,8 @@ function renderHeader() {
   const t = parseDate(today);
   const settings = S.view === "settings";
   const papersView = S.view === "papers";
-  $("title").textContent = T[S.view] + (S.project && !settings && !papersView ? ` · ${S.project}` : "");
+  const projectView = S.view === "project";
+  $("title").textContent = projectView ? S.project : T[S.view];
   if (!POPUP) $("papers-fetch").hidden = !papersView;
 
   let date = "";
@@ -367,6 +377,16 @@ function renderHeader() {
     date = `${T.day(mon)} – ${T.day(sun, sun.getMonth() !== mon.getMonth())}`;
   }
   if (papersView) date = S.papers.last_fetch ? T.papersUpdated(S.papers.last_fetch) : T.papersNever;
+  if (projectView) date = T.project;
+  if (!POPUP) {
+    $("proj-colors").hidden = !projectView;
+    if (projectView) {
+      const mine = projectColor(S.project);
+      $("proj-colors").innerHTML = `<button class="swatch-default" data-color="" aria-pressed="${!mine}">${T.colorDefault}</button>`
+        + S.data.palette.map(c => `<button class="swatch" data-color="${c}" style="background:${c}"
+            aria-pressed="${mine === c}" aria-label="${c}"></button>`).join("");
+    }
+  }
   $("subtitle").textContent = date;
   renderWeather();
 
@@ -383,15 +403,17 @@ function renderHeader() {
       + (POPUP ? "" : stat(tasks.length - open, T.done, "muted"));
   } else if (S.view === "trash") {
     stats = stat(tasks.length, T.items, "muted");
+  } else if (projectView) {
+    stats = stat(open, T.open) + stat(tasks.length - open, T.done, "muted");
   } else {
     stats = stat(tasks.length, { done: T.done, someday: T.ideas }[S.view] || T.tasks);
   }
   $("stats").innerHTML = stats;
   $("stats").hidden = !stats;
 
-  const canAdd = BUCKETS.includes(S.view);
+  const canAdd = BUCKETS.includes(S.view) || projectView;
   $("quick-add").hidden = !canAdd;
-  if (canAdd) $("quick-input").placeholder = T.ph[S.view];
+  if (canAdd) $("quick-input").placeholder = projectView ? T.phProject(S.project) : T.ph[S.view];
   if (!POPUP) $("hint").textContent = S.view === "trash" ? T.hintTrash : papersView ? T.hintPapers : T.hint;
 }
 
@@ -410,6 +432,12 @@ function renderList() {
     if (S.data.gcal_reauth && !POPUP) {
       html = `<div class="banner">${T.gcalExpired}<button class="btn" data-goto-settings>${T.gcalReconnect}</button></div>` + html;
     }
+  } else if (S.view === "project") {
+    // The whole project on one page, grouped the way the sidebar views would show it.
+    const open = tasks.filter(t => !t.done);
+    html = BUCKETS.map(b => section(T[b], open.filter(t => t.bucket === b))).join("")
+      + section(T.done, tasks.filter(t => t.done));
+    html ||= empty(T.empty.project);
   } else if (S.view === "week" && (S.data.events || []).length) {
     html = eventsSection() + (section(T.weekTasks, tasks) || empty(T.empty.week));
   } else {
@@ -486,7 +514,11 @@ function taskRow(t) {
     else meta.push(`<span class="chip">D-${n} · ${date}</span>`);
   }
   if (t.due_time) meta.push(`<span class="info time">${icon("clock")}${t.due_time}</span>`);
-  if (t.project) meta.push(`<span class="chip project" style="--h:${hue(t.project)}">${esc(t.project)}</span>`);
+  if (t.project && S.view !== "project") {
+    const c = projectColor(t.project);
+    meta.push(c ? `<span class="chip project custom" style="--pc:${c}">${esc(t.project)}</span>`
+                : `<span class="chip project" style="--h:${hue(t.project)}">${esc(t.project)}</span>`);
+  }
   if (t.recurrence) meta.push(`<span class="info">${icon("repeat")}${T[t.recurrence]}</span>`);
   if (t.notes) meta.push(`<span class="info" title="${T.notes}">${icon("note")}</span>`);
   if (S.view === "today" && t.bucket !== "today" && !t.done) meta.push(`<span class="info">${T[t.bucket]}</span>`);
@@ -943,6 +975,7 @@ function bind() {
     const li = e.target.closest("[data-view]");
     if (!li) return;
     S.view = li.dataset.view;
+    S.project = "";  // a sidebar view always shows everything, not one project
     closeDetail();
     load();
   });
@@ -951,8 +984,18 @@ function bind() {
   $("projects").addEventListener("click", e => {
     const li = e.target.closest("[data-project]");
     if (!li) return;
-    S.project = S.project === li.dataset.project ? "" : li.dataset.project;
+    // Clicking the open project again goes back to Today.
+    const same = S.view === "project" && S.project === li.dataset.project;
+    S.view = same ? "today" : "project";
+    S.project = same ? "" : li.dataset.project;
+    closeDetail();
     load();
+  });
+  $("proj-colors").addEventListener("click", async e => {
+    const b = e.target.closest("[data-color]");
+    if (!b) return;
+    await api().set_project_color(S.project, b.dataset.color);
+    await load();
   });
   document.addEventListener("keydown", async e => {
     const typing = e.target.matches("input, textarea, select");

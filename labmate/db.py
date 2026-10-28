@@ -185,7 +185,7 @@ class Store:
 
     def update(self, task_id: int, **fields) -> None:
         self._check(fields)
-        if fields.get("due_date"):  # keep the stored bucket in step, so clearing the date later leaves it there
+        if fields.get("due_date") and "bucket" not in fields:  # keep the stored bucket in step with the date
             fields["bucket"] = bucket_for_due(fields["due_date"], date.today())
         fields["updated_at"] = _now()
         sets = ", ".join(f"{k} = ?" for k in fields)
@@ -203,7 +203,7 @@ class Store:
             due = next_due(task.due_date or today, task.recurrence)
             while due <= today:  # catch up an overdue series, keeping its weekday/day
                 due = next_due(due, task.recurrence)
-            self.update(task_id, due_date=due)  # the new date moves it out of Today
+            self.update(task_id, due_date=due, bucket=bucket_for_due(due, today))  # the new date moves it out of Today
             return
         self.conn.execute(
             "UPDATE tasks SET done = ?, completed_at = ?, updated_at = ? WHERE id = ?",
@@ -252,6 +252,11 @@ class Store:
             order = "done, due_date IS NULL, due_date, due_time IS NULL, due_time, id"
         elif view in BUCKETS:
             where = f"{alive} AND done = 0 AND {view_of} = :view"
+            order = "due_date IS NULL, due_date, due_time IS NULL, due_time, id"
+        elif view == "project":  # everything in one project; the page groups it by view
+            if not project:
+                raise ValueError("project view needs a project")
+            where = alive
             order = "due_date IS NULL, due_date, due_time IS NULL, due_time, id"
         elif view == "done":
             where = f"{alive} AND done = 1"

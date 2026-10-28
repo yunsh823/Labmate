@@ -178,3 +178,17 @@ def test_event_colour_beats_calendar_colour(api):
                               {"title": "Red", "calendar_id": "c1", "color": "#4f6bed", "event_color": "#dc2127"}]
     api.set_calendar_color("c1", "#33b679")
     assert [e["color"] for e in api.state("today")["events"]] == ["#33b679", "#dc2127"]
+
+
+def test_project_colours_and_totals(api):
+    api.add("A", "today", "P")
+    api.add("B", "today", "Q")
+    st = api.state("project", "P")
+    assert [t["title"] for t in st["tasks"]] == ["A"]
+    assert st["counts"]["today"] == 2  # sidebar counts are totals, not one project's
+    api.set_project_color("P", st["palette"][0])
+    assert api.state("today")["project_colors"] == {"P": st["palette"][0]}
+    api.set_project_color("P", "")
+    assert api.state("today")["project_colors"] == {}
+    with pytest.raises(ValueError):
+        api.set_project_color("P", "red")

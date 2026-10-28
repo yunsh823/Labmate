@@ -206,6 +206,8 @@ ul { list-style: none; margin: 0; padding: 0; }
 .chip.danger { background: var(--danger-soft); color: var(--danger); font-weight: 600; }
 .chip.today { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .chip.project { background: hsla(var(--h), 70%, 55%, 0.15); color: hsl(var(--h), 55%, var(--chip-l)); }
+.chip.project.custom { background: color-mix(in srgb, var(--pc) 16%, transparent); color: color-mix(in srgb, var(--pc) 80%, var(--text)); }
+.proj-colors { margin-left: 8px; align-self: center; }
 
 .row-actions { display: flex; gap: 4px; }
 .empty { text-align: center; color: var(--text-3); padding: 60px 0; font-size: 15px; }
